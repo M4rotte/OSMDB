@@ -64,16 +64,19 @@ class SQLite:
             
     def updateHosts(self, ping_delays):
         
+        nb_up = nb_down = nb_new = nb_lost = nb_back = 0
         for hostname,fqdn,delay in ping_delays:
             alive = self.hostAlive(hostname)
             seen_once = self.hostSeenOnce(hostname)
             self.addHost(hostname, fqdn, delay)
-            now = int(time())
+            start = time()
+            now = int(start)
             query = """UPDATE host SET last_check = ? WHERE hostname = ?"""
             self.cursor.execute(query, (now, hostname))
             query = """UPDATE host SET ping_delay = ? WHERE hostname = ?"""
             self.cursor.execute(query, (delay, hostname))
             if delay is -1:
+                nb_down += 1
                 query = """UPDATE host SET down = down + 1 WHERE hostname = ?"""
                 self.cursor.execute(query, (hostname,))
                 if not alive:
@@ -83,12 +86,14 @@ class SQLite:
                     query = """UPDATE host SET last_down = ? WHERE hostname = ?"""
                     self.cursor.execute(query, (now, hostname))
                 else:
-                    self.logger.log('Host “'+hostname+'” now appears to be down.',2)
+                    nb_lost += 1
+                    self.logger.log('Host “'+hostname+'” became unreachable.',2)
                     query = """UPDATE host SET last_change = ? WHERE hostname = ?"""
                     self.cursor.execute(query, (now, hostname))
                     query = """UPDATE host SET adjacent_down = 1 WHERE hostname = ?"""
                     self.cursor.execute(query, (hostname,))
             else:
+                nb_up += 1
                 query = """UPDATE host SET up = up + 1 WHERE hostname = ?"""
                 self.cursor.execute(query, (hostname,))
                 query = """UPDATE host SET ping_delay = ? WHERE hostname = ?"""
@@ -100,8 +105,10 @@ class SQLite:
                     query = """UPDATE host SET last_up = ? WHERE hostname = ?"""
                     self.cursor.execute(query, (now, hostname))
                 else:
-                    self.logger.log('Host “'+hostname+'” now appears to be up.',1)
+                    
                     if not seen_once:
+                        self.logger.log('Host “'+hostname+'” showed up for the first time.',1)
+                        nb_new += 1
                         query = """UPDATE host SET first_up = ? WHERE hostname = ?"""
                         self.cursor.execute(query, (now, hostname))
                         query = """UPDATE host SET last_up = ? WHERE hostname = ?"""
@@ -110,11 +117,18 @@ class SQLite:
                         self.cursor.execute(query, (0, hostname))
                         query = """UPDATE host SET down = ? WHERE hostname = ?"""
                         self.cursor.execute(query, (0, hostname))
+                    else: 
+                        nb_back += 1
+                        self.logger.log('Host “'+hostname+'” is back.',1)   
                     query = """UPDATE host SET last_change = ? WHERE hostname = ?"""
                     self.cursor.execute(query, (now, hostname))
                     query = """UPDATE host SET adjacent_up = 1 WHERE hostname = ?"""
                     self.cursor.execute(query, (hostname,))                                        
-        try: self.connection.commit()
+        try:
+            self.connection.commit()
+            end = time()
+            elapsed = str(datetime.timedelta(seconds=(end - start)))
+            self.logger.log('{} hosts updated in {} (UP:{} DOWN:{} BACK:{} LOST:{} NEW:{})'.format(len(ping_delays), elapsed, nb_up, nb_down, nb_back, nb_lost, nb_new), 1)
         except Exception as e:
             print(' **!!** '+str(e))
             return False
@@ -137,5 +151,5 @@ class SQLite:
             else:
                 last = datetime.datetime.fromtimestamp(record[7]).strftime('%Y-%m-%d %H:%M:%S')
                 last_nb = record[9]
-            hosts.append('{:20s} {:4s}\t{}\t{}\t{}\t{:.6f}%'.format(hostname,status,check,last_nb,last,availability))  
+            hosts.append('{:30s} {:4s}\t{}\t{}\t{}\t{:.6f}%'.format(hostname,status,check,last_nb,last,availability))  
         return hosts

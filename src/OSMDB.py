@@ -6,14 +6,19 @@ import ipaddress
 import subprocess
 import Host, Logger
 from multiprocessing import Process, Queue
+from datetime import timedelta
+from time import time
 
-def getDefaultRoute(): return str(subprocess.check_output(['ip','route'], universal_newlines=True).splitlines()[1]).split(' ')[0]
+def getDefaultRoute(): 
+    """Call the external command `ip route`. This only works with Linux. The default route is used if no network is given in the command line (--network)."""
+    return str(subprocess.check_output(['ip','route'], universal_newlines=True).splitlines()[1]).split(' ')[0]
+
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n): yield l[i:i + n]
 
 class OSMDB:
-    
+    """The Overly Simple Management Database main object."""
     def __init__(self, configuration, db, logger = Logger.Logger()):
         
         self.db = db
@@ -23,9 +28,10 @@ class OSMDB:
     def __repr__(self): return 'OSMDB'
         
     def pingHosts(self, network = '127.0.0.0/8'):
-        """Ping all hosts in a given network and update the database. It returns the list of hosts.
-           If False is specified as the network argument it will use the `ip route` external command
-           to get the default route and will use this route."""
+        """Ping all hosts in a given network and update the database. It returns the list
+           of hosts, each host being a triplet (hostname, fqdn, ping_delay).
+           If network is False the `ip route` external command will be called
+           to get the default route and use it."""
         hosts = []
         if not network: network = getDefaultRoute()
         try: net = ipaddress.IPv4Network(network)
@@ -34,13 +40,16 @@ class OSMDB:
             return hosts
         addresses = list(net.hosts())
         remaining = len(addresses)
-        queue = Queue()
+        queue = Queue(remaining)
+        self.logger.log('Processing {} addresses in batches of {}.'.format(remaining, str(self.configuration['chunk_size'])), 0)
+        batch_index = 1
+        start = time()
         try:
             for chunk in chunks(list(net.hosts()), self.configuration['chunk_size']):
                 remaining -= len(chunk)
                 first = chunk[0]
                 last = chunk[-1:][0]
-                self.logger.log('Processing {} addresses, from {} to {}, {} addresses remain.'.format(str(len(chunk)), first, last, str(remaining)), 0)
+                self.logger.log('Batch #{:03d} ({}) {} → {}, ({} left)'.format(batch_index, str(len(chunk)), first, last, str(remaining)), 0)
                 for address in chunk:
                     host = Host.Host()
                     Process(target=host.process, args=(address, queue)).start()
@@ -48,8 +57,15 @@ class OSMDB:
                 for host in chunk:
                     hosts.append(queue.get())
                     
+                batch_index += 1
+        
+            end = time()
+            elapsed = str(timedelta(seconds=(end - start)))
+            rate = len(addresses) / (end - start)
+            self.logger.log('{} addresses scanned in {} ({:.2f} a/s)'.format(len(addresses), elapsed, rate), 0)
+
         except KeyboardInterrupt:
-            print('Host update cancelled!', file=sys.stderr)
+            self.logger.log('Host update cancelled!', 5)
             return []
         
         return hosts
