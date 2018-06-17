@@ -1,6 +1,7 @@
 """SQLite backend"""
 import sqlite3
 from time import time
+from os import path
 import datetime
 import Logger
 class SQLite:
@@ -15,7 +16,7 @@ class SQLite:
         except KeyError as e:
             print(str(e))
     
-    def __repr__(self): return 'SQLite'
+    def __repr__(self): return path.basename(self.configuration['db_file'])
 
     def initialize_db(self):
         host_table_creation_query = """CREATE TABLE IF NOT EXISTS host (
@@ -82,7 +83,7 @@ class SQLite:
                     query = """UPDATE host SET last_down = ? WHERE hostname = ?"""
                     self.cursor.execute(query, (now, hostname))
                 else:
-                    self.logger.log('Host “'+hostname+'” now appears to be down.',1)
+                    self.logger.log('Host “'+hostname+'” now appears to be down.',2)
                     query = """UPDATE host SET last_change = ? WHERE hostname = ?"""
                     self.cursor.execute(query, (now, hostname))
                     query = """UPDATE host SET adjacent_down = 1 WHERE hostname = ?"""
@@ -99,7 +100,7 @@ class SQLite:
                     query = """UPDATE host SET last_up = ? WHERE hostname = ?"""
                     self.cursor.execute(query, (now, hostname))
                 else:
-                    self.logger.log('Host “'+hostname+'” now appears to be up.',2)
+                    self.logger.log('Host “'+hostname+'” now appears to be up.',1)
                     if not seen_once:
                         query = """UPDATE host SET first_up = ? WHERE hostname = ?"""
                         self.cursor.execute(query, (now, hostname))
