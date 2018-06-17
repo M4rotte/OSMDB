@@ -21,7 +21,8 @@ class SQLite:
                                                           last_change INT,
                                                           adjacent_up INT DEFAULT 0,
                                                           adjacent_down INT DEFAULT 0,
-                                                          checks INT DEFAULT 0)"""
+                                                          up INT DEFAULT 0,
+                                                          down INT DEFAULT 0)"""
         self.cursor.execute(host_table_creation_query)
         self.connection.commit()
 
@@ -60,11 +61,11 @@ class SQLite:
             now = int(time())
             query = """UPDATE host SET last_check = ? WHERE hostname = ?"""
             self.cursor.execute(query, (now, hostname))
-            query = """UPDATE host SET checks = checks + 1 WHERE hostname = ?"""
-            self.cursor.execute(query, (hostname,))
             query = """UPDATE host SET ping_delay = ? WHERE hostname = ?"""
             self.cursor.execute(query, (delay, hostname))
             if delay is -1:
+                query = """UPDATE host SET down = down + 1 WHERE hostname = ?"""
+                self.cursor.execute(query, (hostname,))
                 if not alive:
                     # ~ print('Host “'+hostname+'” was dead and still is.')
                     query = """UPDATE host SET adjacent_down = adjacent_down + 1 WHERE hostname = ?"""
@@ -78,6 +79,8 @@ class SQLite:
                     query = """UPDATE host SET adjacent_down = 1 WHERE hostname = ?"""
                     self.cursor.execute(query, (hostname,))
             else:
+                query = """UPDATE host SET up = up + 1 WHERE hostname = ?"""
+                self.cursor.execute(query, (hostname,))
                 query = """UPDATE host SET ping_delay = ? WHERE hostname = ?"""
                 self.cursor.execute(query, (delay, hostname))
                 if alive:
@@ -112,6 +115,7 @@ class SQLite:
             hostname = record[0]
             if record[3] == -1: status = 'DOWN'
             else: status = 'UP'
+            availability = record[11] * 100 / (record[11] + record[12])
             check = datetime.datetime.fromtimestamp(record[5]).strftime('%Y-%m-%d %H:%M:%S')
             if status == 'DOWN':
                 last = datetime.datetime.fromtimestamp(record[6]).strftime('%Y-%m-%d %H:%M:%S')
@@ -119,5 +123,5 @@ class SQLite:
             else:
                 last = datetime.datetime.fromtimestamp(record[7]).strftime('%Y-%m-%d %H:%M:%S')
                 last_nb = record[9]
-            hosts.append('{:20s} {:4s}\t{}\t{}\t{}'.format(hostname,status,check,last_nb,last))  
+            hosts.append('{:20s} {:4s}\t{}\t{}\t{}\t{:.6f}%'.format(hostname,status,check,last_nb,last,availability))  
         return hosts
