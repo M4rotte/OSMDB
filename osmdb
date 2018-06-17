@@ -9,14 +9,17 @@ except ImportError as e:
     print('Cannot find the module(s) listed above. Exiting.', file=sys.stderr)
     sys.exit(1)
 
-short_options = {'--update'    :'-u',
-                 '--network'   :'-n'}
+short_options = {'--update'    : '-u',
+                 '--network'   : '-n',
+                 '--list'      : '-l'}
 cmdline = Cmdline.Cmdline(sys.argv, short_options)
 configuration = Configuration.Configuration()
 db = DB(configuration.configuration)
 osmdb = OSMDB.OSMDB(configuration.configuration, db)
 
-if cmdline.option('u') == 'hosts':
+if cmdline.option('u') in ['host','hosts']:
     ping_delays = osmdb.pingHosts(cmdline.option('n'))
     osmdb.updateHosts(ping_delays)
 
+if cmdline.option('l') in ['host','hosts']:
+    osmdb.listHosts()

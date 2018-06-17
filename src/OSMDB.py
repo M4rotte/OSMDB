@@ -52,5 +52,8 @@ class OSMDB:
         return hosts
 
     def updateHosts(self, ping_delays): self.db.updateHosts(ping_delays)
+    def listHosts(self):
+        for host in self.db.listHosts():
+            print(host)
 
 if __name__ == '__main__': sys.exit(100)

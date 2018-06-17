@@ -72,8 +72,6 @@ class Host:
         if self.fqdn: return self.fqdn
         else: return self.hostname
 
-    def ping(self):
-
-        return ping(self.address)
+    def ping(self): return ping(self.address)
 
 if __name__ == '__main__': sys.exit(100)

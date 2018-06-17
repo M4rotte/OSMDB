@@ -1,6 +1,7 @@
 """SQLite backend"""
 import sqlite3
 from time import time
+import datetime
 class SQLite:
     def __init__(self, configuration):
         self.connection = sqlite3.connect(configuration['db_file'])
@@ -8,7 +9,6 @@ class SQLite:
         self.initialize_db()
 
     def initialize_db(self):
-        
         host_table_creation_query = """CREATE TABLE IF NOT EXISTS host (
                                                           hostname TEXT PRIMARY KEY,
                                                           fqdn TEXT,
@@ -16,8 +16,8 @@ class SQLite:
                                                           ping_delay FLOAT DEFAULT -1,
                                                           first_up INT,
                                                           last_check INT,
-                                                          last_up INT,
-                                                          last_down INT,
+                                                          last_up INT DEFAULT 0,
+                                                          last_down INT DEFAULT 0,
                                                           last_change INT,
                                                           adjacent_up INT DEFAULT 0,
                                                           adjacent_down INT DEFAULT 0,
@@ -37,7 +37,7 @@ class SQLite:
         query = """SELECT first_up FROM host WHERE hostname = ?"""
         try:
             result = self.cursor.execute(query, (hostname,)).fetchall()[0]
-            if result[0] != -1: return True
+            if result[0] not in [-1, None]: return True
             else: return False
         except IndexError: return False
 
@@ -57,11 +57,13 @@ class SQLite:
             alive = self.hostAlive(hostname)
             seen_once = self.hostSeenOnce(hostname)
             self.addHost(hostname, fqdn, delay)
+            now = int(time())
+            query = """UPDATE host SET last_check = ? WHERE hostname = ?"""
+            self.cursor.execute(query, (now, hostname))
             query = """UPDATE host SET checks = checks + 1 WHERE hostname = ?"""
             self.cursor.execute(query, (hostname,))
             query = """UPDATE host SET ping_delay = ? WHERE hostname = ?"""
             self.cursor.execute(query, (delay, hostname))
-            now = int(time())
             if delay is -1:
                 if not alive:
                     # ~ print('Host “'+hostname+'” was dead and still is.')
@@ -89,13 +91,33 @@ class SQLite:
                     if not seen_once:
                         query = """UPDATE host SET first_up = ? WHERE hostname = ?"""
                         self.cursor.execute(query, (now, hostname))
+                        query = """UPDATE host SET last_up = ? WHERE hostname = ?"""
+                        self.cursor.execute(query, (now, hostname))
                     query = """UPDATE host SET last_change = ? WHERE hostname = ?"""
                     self.cursor.execute(query, (now, hostname))
                     query = """UPDATE host SET adjacent_up = 1 WHERE hostname = ?"""
                     self.cursor.execute(query, (hostname,))                                        
-
         try: self.connection.commit()
         except Exception as e:
             print(' **!!** '+str(e))
             return False
         return True
+
+    def listHosts(self):
+        
+        query = """SELECT * FROM host WHERE first_up NOT NULL ORDER BY last_change DESC"""
+        results = self.cursor.execute(query).fetchall()
+        hosts = []
+        for record in results:
+            hostname = record[0]
+            if record[3] == -1: status = 'DOWN'
+            else: status = 'UP'
+            check = datetime.datetime.fromtimestamp(record[5]).strftime('%Y-%m-%d %H:%M:%S')
+            if status == 'DOWN':
+                last = datetime.datetime.fromtimestamp(record[6]).strftime('%Y-%m-%d %H:%M:%S')
+                last_nb = record[10]
+            else:
+                last = datetime.datetime.fromtimestamp(record[7]).strftime('%Y-%m-%d %H:%M:%S')
+                last_nb = record[9]
+            hosts.append('{:20s} {:4s}\t{}\t{}\t{}'.format(hostname,status,check,last_nb,last))  
+        return hosts
