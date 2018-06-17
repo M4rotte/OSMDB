@@ -2,15 +2,20 @@
 import sqlite3
 from time import time
 import datetime
+import Logger
 class SQLite:
-    def __init__(self, configuration):
+    def __init__(self, configuration, logger = Logger.Logger()):
         
         try:
-            self.connection = sqlite3.connect(configuration['db_file'])
+            self.logger = logger
+            self.configuration = configuration
+            self.connection = sqlite3.connect(self.configuration['db_file'])
             self.cursor = self.connection.cursor()
             self.initialize_db()
         except KeyError as e:
             print(str(e))
+    
+    def __repr__(self): return 'SQLite'
 
     def initialize_db(self):
         host_table_creation_query = """CREATE TABLE IF NOT EXISTS host (
@@ -53,7 +58,7 @@ class SQLite:
             self.cursor.execute(query, (hostname, fqdn, delay))
             return True
         except Exception as e:
-            print(' **!!** '+str(e))
+            print(' **!!** '+str(e), file=sys.stderr)
             return False
             
     def updateHosts(self, ping_delays):
@@ -77,7 +82,7 @@ class SQLite:
                     query = """UPDATE host SET last_down = ? WHERE hostname = ?"""
                     self.cursor.execute(query, (now, hostname))
                 else:
-                    print('Host “'+hostname+'” was alive but is dead now.')
+                    self.logger.log('Host “'+hostname+'” now appears to be down.',1)
                     query = """UPDATE host SET last_change = ? WHERE hostname = ?"""
                     self.cursor.execute(query, (now, hostname))
                     query = """UPDATE host SET adjacent_down = 1 WHERE hostname = ?"""
@@ -94,7 +99,7 @@ class SQLite:
                     query = """UPDATE host SET last_up = ? WHERE hostname = ?"""
                     self.cursor.execute(query, (now, hostname))
                 else:
-                    print('Host “'+hostname+'” was dead but is alive now.')
+                    self.logger.log('Host “'+hostname+'” now appears to be up.',2)
                     if not seen_once:
                         query = """UPDATE host SET first_up = ? WHERE hostname = ?"""
                         self.cursor.execute(query, (now, hostname))

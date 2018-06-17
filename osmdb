@@ -14,8 +14,9 @@ short_options = {'--update'    : '-u',
                  '--list'      : '-l'}
 cmdline = Cmdline.Cmdline(sys.argv, short_options)
 configuration = Configuration.Configuration()
-db = DB(configuration.configuration)
 logger = Logger.Logger()
+logger.log_time = True
+db = DB(configuration.configuration,logger)
 logger.setLogfile(configuration.configuration['log_file'])
 osmdb = OSMDB.OSMDB(configuration.configuration, db, logger)
 

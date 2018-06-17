@@ -20,6 +20,8 @@ class OSMDB:
         self.configuration = configuration
         self.logger = logger
         
+    def __repr__(self): return 'OSMDB'
+        
     def pingHosts(self, network = '127.0.0.0/8'):
         """Ping all hosts in a given network and update the database. It returns the list of hosts.
            If False is specified as the network argument it will use the `ip route` external command
@@ -28,7 +30,7 @@ class OSMDB:
         if not network: network = getDefaultRoute()
         try: net = ipaddress.IPv4Network(network)
         except ValueError as e:
-            print('Invalid network specification: '+str(e))
+            print('Invalid network specification: '+str(e), file=sys.stderr)
             return hosts
         addresses = list(net.hosts())
         remaining = len(addresses)
@@ -38,7 +40,7 @@ class OSMDB:
                 remaining -= len(chunk)
                 first = chunk[0]
                 last = chunk[-1:][0]
-                self.logger.log('Processing {} addresses, from {} to {}, {} addresses remain.'.format(str(len(chunk)), first, last, str(remaining)))
+                self.logger.log('Processing {} addresses, from {} to {}, {} addresses remain.'.format(str(len(chunk)), first, last, str(remaining)), 0)
                 for address in chunk:
                     host = Host.Host()
                     Process(target=host.process, args=(address, queue)).start()
@@ -47,7 +49,7 @@ class OSMDB:
                     hosts.append(queue.get())
                     
         except KeyboardInterrupt:
-            print('Host update cancelled!',file=sys.stderr)
+            print('Host update cancelled!', file=sys.stderr)
             return []
         
         return hosts

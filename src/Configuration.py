@@ -12,7 +12,7 @@ class Configuration():
             if not self.configuration.get('log_file', False):
                 self.configuration['log_file'] = '&1'
         except Exception as e:
-            print('Can’t load configuration, using default values! ({})'.format(str(e)),file=sys.stderr)
+            print('Can’t load configuration, will be using default values! ({})'.format(str(e)),file=sys.stderr)
             self.configuration['log_file'] = '&1'
             self.configuration['chunk_size'] = 32
             self.configuration['db_file'] = './osmdb.db'
