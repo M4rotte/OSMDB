@@ -4,7 +4,7 @@
 import sys
 import ipaddress
 import subprocess
-import Host
+import Host, Logger
 from multiprocessing import Process, Queue
 
 def getDefaultRoute(): return str(subprocess.check_output(['ip','route'], universal_newlines=True).splitlines()[1]).split(' ')[0]
@@ -14,10 +14,11 @@ def chunks(l, n):
 
 class OSMDB:
     
-    def __init__(self, configuration, db):
+    def __init__(self, configuration, db, logger = Logger.Logger()):
         
         self.db = db
         self.configuration = configuration
+        self.logger = logger
         
     def pingHosts(self, network = '127.0.0.0/8'):
         """Ping all hosts in a given network and update the database. It returns the list of hosts.
@@ -37,7 +38,7 @@ class OSMDB:
                 remaining -= len(chunk)
                 first = chunk[0]
                 last = chunk[-1:][0]
-                print('Processing {} hosts… {} → {} (remains:{})'.format(str(len(chunk)), first, last, str(remaining)))
+                self.logger.log('Processing {} addresses, from {} to {}, {} addresses remain.'.format(str(len(chunk)), first, last, str(remaining)))
                 for address in chunk:
                     host = Host.Host()
                     Process(target=host.process, args=(address, queue)).start()

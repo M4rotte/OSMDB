@@ -1,3 +1,4 @@
 *.db
+*.log
 src/__pycache__/
 

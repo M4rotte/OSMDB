@@ -4,9 +4,13 @@ from time import time
 import datetime
 class SQLite:
     def __init__(self, configuration):
-        self.connection = sqlite3.connect(configuration['db_file'])
-        self.cursor = self.connection.cursor()
-        self.initialize_db()
+        
+        try:
+            self.connection = sqlite3.connect(configuration['db_file'])
+            self.cursor = self.connection.cursor()
+            self.initialize_db()
+        except KeyError as e:
+            print(str(e))
 
     def initialize_db(self):
         host_table_creation_query = """CREATE TABLE IF NOT EXISTS host (
@@ -96,6 +100,10 @@ class SQLite:
                         self.cursor.execute(query, (now, hostname))
                         query = """UPDATE host SET last_up = ? WHERE hostname = ?"""
                         self.cursor.execute(query, (now, hostname))
+                        query = """UPDATE host SET adjacent_down = ? WHERE hostname = ?"""
+                        self.cursor.execute(query, (0, hostname))
+                        query = """UPDATE host SET down = ? WHERE hostname = ?"""
+                        self.cursor.execute(query, (0, hostname))
                     query = """UPDATE host SET last_change = ? WHERE hostname = ?"""
                     self.cursor.execute(query, (now, hostname))
                     query = """UPDATE host SET adjacent_up = 1 WHERE hostname = ?"""

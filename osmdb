@@ -15,7 +15,9 @@ short_options = {'--update'    : '-u',
 cmdline = Cmdline.Cmdline(sys.argv, short_options)
 configuration = Configuration.Configuration()
 db = DB(configuration.configuration)
-osmdb = OSMDB.OSMDB(configuration.configuration, db)
+logger = Logger.Logger()
+logger.setLogfile(configuration.configuration['log_file'])
+osmdb = OSMDB.OSMDB(configuration.configuration, db, logger)
 
 if cmdline.option('u') in ['host','hosts']:
     ping_delays = osmdb.pingHosts(cmdline.option('n'))

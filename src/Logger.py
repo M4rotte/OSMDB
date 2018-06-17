@@ -9,6 +9,7 @@ class Logger:
     def __init__(self):
         self.logfile  = sys.stderr
         self.log_time = False
+        self.level = 0
 
     def __del__(self): self.logfile.close()
 
