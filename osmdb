@@ -21,8 +21,9 @@ logger.setLogfile(configuration.configuration['log_file'])
 osmdb = OSMDB.OSMDB(configuration.configuration, db, logger)
 
 if cmdline.option('u') in ['host','hosts']:
+    if cmdline.option('n') in [False,True]: cmdline.options['n'] = OSMDB.getDefaultRoute()
     ping_delays = osmdb.pingHosts(cmdline.option('n'))
-    osmdb.updateHosts(ping_delays)
+    osmdb.updateHosts(ping_delays,cmdline.option('n'))
 
 if cmdline.option('l') in ['host','hosts']:
     osmdb.listHosts()

@@ -19,21 +19,32 @@ class SQLite:
     def __repr__(self): return path.basename(self.configuration['db_file'])
 
     def initialize_db(self):
-        host_table_creation_query = """CREATE TABLE IF NOT EXISTS host (
-                                                          hostname TEXT PRIMARY KEY,
-                                                          fqdn TEXT,
-                                                          ip TEXT,
-                                                          ping_delay FLOAT DEFAULT -1,
-                                                          first_up INT,
-                                                          last_check INT,
-                                                          last_up INT DEFAULT 0,
-                                                          last_down INT DEFAULT 0,
-                                                          last_change INT,
-                                                          adjacent_up INT DEFAULT 0,
-                                                          adjacent_down INT DEFAULT 0,
-                                                          up INT DEFAULT 0,
-                                                          down INT DEFAULT 0)"""
-        self.cursor.execute(host_table_creation_query)
+        host_table = """CREATE TABLE IF NOT EXISTS host (
+                            hostname TEXT PRIMARY KEY,
+                            fqdn TEXT,
+                            ip TEXT,
+                            ping_delay FLOAT DEFAULT -1,
+                            first_up INT,
+                            last_check INT,
+                            last_up INT DEFAULT 0,
+                            last_down INT DEFAULT 0,
+                            last_change INT,
+                            adjacent_up INT DEFAULT 0,
+                            adjacent_down INT DEFAULT 0,
+                            up INT DEFAULT 0,
+                            down INT DEFAULT 0)"""
+        
+        self.cursor.execute(host_table)
+        
+        host_update_table = """CREATE TABLE IF NOT EXISTS host_update (
+                                       update_time FLOAT,
+                                       network TEXT,
+                                       selection TEXT,
+                                       up INT, down INT, back INT, lost INT, new INT,
+                                       duration FLOAT)"""
+        
+        self.cursor.execute(host_update_table)
+        
         self.connection.commit()
 
     def hostAlive(self, hostname):
@@ -62,7 +73,7 @@ class SQLite:
             print(' **!!** '+str(e), file=sys.stderr)
             return False
             
-    def updateHosts(self, ping_delays):
+    def updateHosts(self, ping_delays, network_name = None):
         
         nb_up = nb_down = nb_new = nb_lost = nb_back = 0
         for hostname,fqdn,delay in ping_delays:
@@ -128,6 +139,7 @@ class SQLite:
             self.connection.commit()
             end = time()
             elapsed = str(datetime.timedelta(seconds=(end - start)))
+            self.recordUpdate((time(), network_name, None, nb_up, nb_down, nb_back, nb_lost, nb_new, elapsed))
             self.logger.log('{} hosts updated in {} (UP:{} DOWN:{} BACK:{} LOST:{} NEW:{})'.format(len(ping_delays), elapsed, nb_up, nb_down, nb_back, nb_lost, nb_new), 1)
         except Exception as e:
             print(' **!!** '+str(e))
@@ -153,3 +165,10 @@ class SQLite:
                 last_nb = record[9]
             hosts.append('{:30s} {:4s}\t{}\t{}\t{}\t{:.6f}%'.format(hostname,status,check,last_nb,last,availability))  
         return hosts
+
+    def recordUpdate(self, values):
+        
+        query = """INSERT INTO host_update (update_time, network, selection, up, down, back, lost, new, duration)
+                    VALUES (?,?,?,?,?,?,?,?,?)"""
+        self.cursor.execute(query, values)
+        self.connection.commit()

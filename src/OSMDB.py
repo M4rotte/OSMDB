@@ -70,7 +70,7 @@ class OSMDB:
         
         return hosts
 
-    def updateHosts(self, ping_delays): self.db.updateHosts(ping_delays)
+    def updateHosts(self, ping_delays, network_name = None): self.db.updateHosts(ping_delays, network_name)
     def listHosts(self):
         for host in self.db.listHosts():
             print(host)
