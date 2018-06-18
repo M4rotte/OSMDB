@@ -74,5 +74,8 @@ class OSMDB:
     def listHosts(self):
         for host in self.db.listHosts():
             print(host)
+    def listHostUpdates(self):
+        for update in self.db.listHostUpdates():
+            print(update)
 
 if __name__ == '__main__': sys.exit(100)

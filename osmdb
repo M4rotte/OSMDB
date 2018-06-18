@@ -27,3 +27,5 @@ if cmdline.option('u') in ['host','hosts']:
 
 if cmdline.option('l') in ['host','hosts']:
     osmdb.listHosts()
+elif cmdline.option('l') in ['update','updates']:
+    osmdb.listHostUpdates()

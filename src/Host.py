@@ -54,7 +54,7 @@ class Host:
         
         self.address = '127.0.0.1'
         self.hostname = 'localhost'
-        self.fqdn = ''
+        self.fqdn = 'localhost.localdomain'
         
     def process(self, address, queue):
     
@@ -64,6 +64,7 @@ class Host:
             self.fqdn = socket.getfqdn(self.hostname)
         except socket.herror:
             self.hostname = self.address
+            self.fqdn = self.address
         finally:
             queue.put((self.hostname,self.fqdn,self.ping()))
 

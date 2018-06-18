@@ -20,8 +20,8 @@ class SQLite:
 
     def initialize_db(self):
         host_table = """CREATE TABLE IF NOT EXISTS host (
-                            hostname TEXT PRIMARY KEY,
-                            fqdn TEXT,
+                            hostname TEXT,
+                            fqdn TEXT PRIMARY KEY,
                             ip TEXT,
                             ping_delay FLOAT DEFAULT -1,
                             first_up INT,
@@ -63,8 +63,8 @@ class SQLite:
             else: return False
         except IndexError: return False
 
-    def addHost(self, hostname, fqdn = '', delay = -1):
-        """Add a host in database if it doesn’t already exist. Field “hostname” assumed to be primary key, thus uniq."""
+    def addHost(self, hostname, fqdn, delay = -1):
+        """Add a host in database if it doesn’t already exist."""
         query = """INSERT OR IGNORE INTO host (hostname, fqdn, ping_delay) VALUES (?,?,?)"""
         try:
             self.cursor.execute(query, (hostname, fqdn, delay))
@@ -172,3 +172,15 @@ class SQLite:
                     VALUES (?,?,?,?,?,?,?,?,?)"""
         self.cursor.execute(query, values)
         self.connection.commit()
+
+    def listHostUpdates(self):
+        
+        query = """SELECT * FROM host_update ORDER BY update_time DESC"""
+        results = self.cursor.execute(query).fetchall()
+        updates = []
+        for record in results:
+            update_time = datetime.datetime.fromtimestamp(record[0]).strftime('%Y-%m-%d %H:%M:%S')
+            if not record[2]: source = record[1]
+            else: source = record[2]
+            updates.append('{} {:18} {}/{} {}/{}/{} {}'.format(update_time,source,record[3],record[4],record[5],record[6],record[7],record[8]))
+        return updates
