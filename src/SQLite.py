@@ -4,6 +4,10 @@ from time import time
 from os import path
 import datetime
 import Logger
+
+def humanTime(timestamp):
+    return datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
 class SQLite:
     def __init__(self, configuration, logger = Logger.Logger()):
         
@@ -156,12 +160,12 @@ class SQLite:
             if record[3] == -1: status = 'DOWN'
             else: status = 'UP'
             availability = record[11] * 100 / (record[11] + record[12])
-            check = datetime.datetime.fromtimestamp(record[5]).strftime('%Y-%m-%d %H:%M:%S')
+            check = humanTime(record[5])
             if status == 'DOWN':
-                last = datetime.datetime.fromtimestamp(record[6]).strftime('%Y-%m-%d %H:%M:%S')
+                last = humanTime(record[6])
                 last_nb = record[10]
             else:
-                last = datetime.datetime.fromtimestamp(record[7]).strftime('%Y-%m-%d %H:%M:%S')
+                last = humanTime(record[7])
                 last_nb = record[9]
             hosts.append('{:30s} {:4s}\t{}\t{}\t{}\t{:.6f}%'.format(hostname,status,check,last_nb,last,availability))  
         return hosts
@@ -179,7 +183,7 @@ class SQLite:
         results = self.cursor.execute(query).fetchall()
         updates = []
         for record in results:
-            update_time = datetime.datetime.fromtimestamp(record[0]).strftime('%Y-%m-%d %H:%M:%S')
+            update_time = humanTime(record[0])
             if not record[2]: source = record[1]
             else: source = record[2]
             updates.append('{} {:18} {}/{} {}/{}/{} {}'.format(update_time,source,record[3],record[4],record[5],record[6],record[7],record[8]))
