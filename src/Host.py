@@ -29,7 +29,8 @@ def ping(addr, timeout=5, number=1, data=b''):
                 if len(data) < 20 or len(data) < struct.unpack_from('!xxH', data)[0]:
                     continue
                 if data[20:] == b'\0\0' + chk(b'\0\0\0\0' + payload) + payload:
-                    return time.time() - start      
+                    return time.time() - start
+            return -1
     except PermissionError as e: return tcp_connect(addr)
 
 def tcp_connect(addr, port = 22, timeout = 10):
