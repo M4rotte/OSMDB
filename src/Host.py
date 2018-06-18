@@ -44,18 +44,29 @@ def tcp_connect(addr, port = 22, timeout = 10):
     except OSError as e:
         # If the error is one of the ones below then return connection time, else return -1
         # 111: Connection refused
-        if e.errno not in ['111']: return -1 
+        if e.errno not in [111]: return -1 
         else: return time.time() - start
     
     return time.time() - start
 
 class Host:
 
-    def __init__(self):
+    def __init__(self, host = None):
         
-        self.address = '127.0.0.1'
-        self.hostname = 'localhost'
-        self.fqdn = 'localhost.localdomain'
+        if not host:
+            self.address = '127.0.0.1'
+            self.hostname = 'localhost'
+            self.fqdn = 'localhost.localdomain'
+        else:
+            try:
+                self.address = host[2]
+                self.hostname = host[0]
+                self.fqdn = host[1]
+            except IndexError: pass
+            try:
+                self.ping = host[3]
+                self.first = host[4]
+            except IndexError: pass
         
     def process(self, address, queue):
     
