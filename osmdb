@@ -11,7 +11,8 @@ except ImportError as e:
 
 short_options = {'--update'    : '-u',
                  '--network'   : '-n',
-                 '--list'      : '-l'}
+                 '--list'      : '-l',
+                 '--execute'   : '-e'}
 cmdline = Cmdline.Cmdline(sys.argv, short_options)
 configuration = Configuration.Configuration()
 logger = Logger.Logger()
@@ -24,6 +25,9 @@ if cmdline.option('u') in ['host','hosts']:
     if cmdline.option('n') in [False,True]: cmdline.options['n'] = OSMDB.getDefaultRoute()
     ping_delays = osmdb.pingHosts(cmdline.option('n'))
     osmdb.updateHosts(ping_delays,cmdline.option('n'))
+
+elif cmdline.option('e'):
+    osmdb.execOnHosts(cmdline.option('e'))
 
 if cmdline.option('l') in ['host','hosts']:
     osmdb.listHosts()

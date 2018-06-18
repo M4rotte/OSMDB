@@ -197,7 +197,9 @@ class SQLite:
             updates.append('{} {:18} {}/{} {}/{}/{} {}'.format(update_time,source,record[3],record[4],record[5],record[6],record[7],record[8]))
         return updates
 
-    def hosts(self):
+    def hosts(self, status = 'UP'):
         
-        query = """SELECT * FROM host WHERE first_up NOT NULL"""
+        if status is 'UP': query = """SELECT * FROM host WHERE ping_delay <> -1"""
+        elif status is 'DOWN': query = """SELECT * FROM host WHERE ping_delay = -1"""
+        else: query = """SELECT * FROM host WHERE first_up NOT NULL"""
         return self.cursor.execute(query).fetchall()

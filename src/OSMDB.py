@@ -8,6 +8,7 @@ import Host, Logger
 from multiprocessing import Process, Queue
 from datetime import timedelta
 from time import time
+import Host
 
 def getDefaultRoute(): 
     """Call the external command `ip route`. This only works with Linux. The default route is used if no network is given in the command line (--network)."""
@@ -71,6 +72,9 @@ class OSMDB:
         return hosts
 
     def updateHosts(self, ping_delays, network_name = None): self.db.updateHosts(ping_delays, network_name)
+    def execOnHosts(self,command,selector='UP'):
+        for host in self.db.hosts('UP'):
+            print(Host.Host(host))
     def listHosts(self):
         for host in self.db.listHosts():
             print(host)
