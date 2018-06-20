@@ -1,5 +1,6 @@
 *.db
 *.log
+osmdb_id*
 src/__pycache__/
 *.spec
 build/

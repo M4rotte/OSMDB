@@ -30,16 +30,16 @@ class WithdrawException(Exception):
 
 class SSHClient:
     """SSH client."""
-    def __init__(self, key = None, logger = None, configuration = None):
-        """The SSH client is initialized with the given RSA key. A new key is generated if none is given."""
+    def __init__(self, logger = None, configuration = None):
+        """The SSH client is initialized from default key. A new key is generated if none exists."""
         self.configuration = configuration
         self.configuration['client_timeout'] = self.configuration.get('client_timeout', 10)
         self.configuration['exec_timeout'] = self.configuration.get('exec_timeout', 10)
         self.configuration['auth_timeout'] = self.configuration.get('auth_timeout', 10)
         self.configuration['banner_timeout'] = self.configuration.get('banner_timeout', 10)
         self.logger = logger
-        if not key: self.newkey()
-        else: self.key = key
+        self.key = self.savedKey(self.configuration['ssh_default_key'])
+        if not self.key: self.newkey()
         message = 'Using key "{}"'.format(self.keyhash())
         logger.log(message, 1)
         self.client = paramiko.SSHClient()
@@ -58,10 +58,12 @@ class SSHClient:
         """Generate a RSA key."""
         self.logger.log('Generating new key…', 1)
         self.key = rsa.generate_private_key(backend=crypto_default_backend(),public_exponent=65537,key_size=2048)
+        self.saveKey(self.configuration['ssh_default_key'],self.configuration['ssh_default_pubkey'])
 
     def pubkey(self):
         """Return the public key."""
-        return self.key.public_key().public_bytes(crypto_serialization.Encoding.OpenSSH,crypto_serialization.PublicFormat.OpenSSH)
+        if self.key: return self.key.get_base64()
+        else: return None
 
     def privkey(self):
         """Return the private key."""
@@ -73,18 +75,25 @@ class SSHClient:
 
     def saveKey(self, keyfile, pubkeyfile):
         """Write the key pair to files."""
+        with open(keyfile, 'wb') as f: f.write(self.key.private_bytes(encoding=crypto_serialization.Encoding.PEM,
+    format=crypto_serialization.PrivateFormat.TraditionalOpenSSL,
+    encryption_algorithm=crypto_serialization.NoEncryption()))
+        with open(pubkeyfile, 'wb') as f: f.write(self.key.public_key().public_bytes(crypto_serialization.Encoding.OpenSSH, \
+    crypto_serialization.PublicFormat.OpenSSH))
+        
+
+    def savedKey(self, keyfile):
+        """Get private key from file."""
         try:
-            with open(keyfile, 'wb') as f: f.write(self.privkey())
-            chmod(keyfile,0o600)
-        except AttributeError as e: print(str(e))
-        try:
-            with open(pubkeyfile, 'wb') as f: f.write(self.pubkey())
-        except AttributeError as e: print(str(e))
+            return paramiko.RSAKey.from_private_key_file(keyfile).key
+        except FileNotFoundError:
+            return None
 
     def keyhash(self):
-        """Return public key’s fingerprint."""
+        """Return public key’s hash."""
         h = blake2b()
-        h.update(self.pubkey())
+        h.update(self.key.public_key().public_bytes(crypto_serialization.Encoding.OpenSSH, \
+    crypto_serialization.PublicFormat.OpenSSH))
         return h.hexdigest()
 
     def _execute(self, user, host, cmdline, q):
