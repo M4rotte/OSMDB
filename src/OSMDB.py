@@ -26,6 +26,7 @@ class OSMDB:
         self.configuration = configuration
         self.logger = logger
         self.ssh = SSHClient.SSHClient(logger=self.logger, configuration=self.configuration)
+
         
     def __repr__(self): return 'OSMDB'
         
@@ -76,7 +77,6 @@ class OSMDB:
         # ~ for host in self.db.hosts('UP'):
             # ~ print(Host.Host(host))
         hosts = list(map(Host.Host, self.db.hosts('UP')))
-        print(self.configuration)
         self.ssh = SSHClient.SSHClient(logger=self.logger, configuration=self.configuration)
         print(self.ssh.execute(command, hosts))
     def listHosts(self):

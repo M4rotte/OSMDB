@@ -9,6 +9,7 @@ try:
     from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.hazmat.backends import default_backend as crypto_default_backend
     from time import time, strftime
+
     from hashlib import blake2b
     from signal import SIGALRM
     from time import time
@@ -17,6 +18,7 @@ try:
     from io import StringIO
     import signal
     from getpass import getpass
+
 except ImportError as e:
     print(str(e), file=sys.stderr)
     print('Cannot find the module(s) listed above. Exiting.', file=sys.stderr)
@@ -32,8 +34,10 @@ class WithdrawException(Exception):
 
 class SSHClient:
     """SSH client."""
+
     def __init__(self, logger = None, configuration = None):
         """The SSH client is initialized from default key. A new key is generated if none exists."""
+
         self.configuration = configuration
         self.configuration['client_timeout'] = self.configuration.get('client_timeout', 10)
         self.configuration['exec_timeout'] = self.configuration.get('exec_timeout', 10)
@@ -42,6 +46,7 @@ class SSHClient:
         self.logger = logger
         self.key = self.savedKey(self.configuration['ssh_default_key'])
         if not self.key: self.newkey()
+
         message = 'Using key "{}"'.format(self.keyhash())
         logger.log(message, 1)
         self.client = paramiko.SSHClient()
@@ -68,6 +73,7 @@ class SSHClient:
                                     crypto_serialization.PublicFormat.OpenSSH)
         else: return None
 
+
     def privkey(self):
         """Return the private key."""
         return self.key.private_bytes(crypto_serialization.Encoding.PEM,crypto_serialization.PrivateFormat.TraditionalOpenSSL,crypto_serialization.NoEncryption())
@@ -78,6 +84,7 @@ class SSHClient:
 
     def saveKey(self, keyfile, pubkeyfile):
         """Write the key pair to files."""
+
         with open(keyfile, 'wb') as f: f.write(self.key.private_bytes(encoding=crypto_serialization.Encoding.PEM,
     format=crypto_serialization.PrivateFormat.TraditionalOpenSSL,
     encryption_algorithm=crypto_serialization.NoEncryption()))
@@ -97,6 +104,7 @@ class SSHClient:
         h = blake2b()
         h.update(self.key.public_key().public_bytes(crypto_serialization.Encoding.OpenSSH, \
     crypto_serialization.PublicFormat.OpenSSH))
+
         return h.hexdigest()
 
     def _execute(self, user, host, cmdline, q):
@@ -246,3 +254,4 @@ class SSHClient:
 
         self.client.close()
         return (True,'OSMDB deployed on '+node_handle)
+
