@@ -4,6 +4,7 @@ try:
     sys.path.insert(0, './src')
     from SQLite import SQLite as DB
     import Logger, Cmdline, Configuration, OSMDB
+    from Help import helpAndExit as helpAndExit
 except ImportError as e:
     print(str(e), file=sys.stderr)
     print('Cannot find the module(s) listed above. Exiting.', file=sys.stderr)
@@ -27,6 +28,7 @@ if cmdline.option('u') in ['host','hosts']:
     osmdb.updateHosts(ping_delays,cmdline.option('n'))
 
 elif cmdline.option('e'):
+    if cmdline.option('e') is True: helpAndExit('execute')
     osmdb.execOnHosts(cmdline.option('e'))
 
 if cmdline.option('l') in ['host','hosts']:

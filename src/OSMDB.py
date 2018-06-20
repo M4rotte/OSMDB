@@ -8,7 +8,7 @@ import Host, Logger
 from multiprocessing import Process, Queue
 from datetime import timedelta
 from time import time
-import Host
+import Host, SSHClient
 
 def getDefaultRoute(): 
     """Call the external command `ip route`. This only works with Linux. The default route is used if no network is given in the command line (--network)."""
@@ -25,6 +25,7 @@ class OSMDB:
         self.db = db
         self.configuration = configuration
         self.logger = logger
+        self.ssh = SSHClient.SSHClient(logger=logger, configuration=configuration)
         
     def __repr__(self): return 'OSMDB'
         
@@ -42,11 +43,11 @@ class OSMDB:
         addresses = list(net.hosts())
         remaining = len(addresses)
         queue = Queue(remaining)
-        self.logger.log('Processing {} addresses in batches of {}.'.format(remaining, str(self.configuration['chunk_size'])), 0)
+        self.logger.log('Processing {} addresses in batches of {}.'.format(remaining, str(self.configuration['ping_chunk_size'])), 0)
         batch_index = 1
         start = time()
         try:
-            for chunk in chunks(list(net.hosts()), self.configuration['chunk_size']):
+            for chunk in chunks(list(net.hosts()), self.configuration['ping_chunk_size']):
                 remaining -= len(chunk)
                 first = chunk[0]
                 last = chunk[-1:][0]
@@ -66,15 +67,17 @@ class OSMDB:
             self.logger.log('{} addresses scanned in {} ({:.2f} a/s)'.format(len(addresses), elapsed, rate), 0)
 
         except KeyboardInterrupt:
-            self.logger.log('Host update cancelled!', 5)
-            return []
+            self.logger.log('Host update cancelled by keyboard interrupt!', 5)
         
         return hosts
 
     def updateHosts(self, ping_delays, network_name = None): self.db.updateHosts(ping_delays, network_name)
-    def execOnHosts(self,command,selector='UP'):
-        for host in self.db.hosts('UP'):
-            print(Host.Host(host))
+    def execOnHosts(self,command='a',selector='UP'):
+        # ~ for host in self.db.hosts('UP'):
+            # ~ print(Host.Host(host))
+        hosts = list(map(Host.Host, self.db.hosts('UP')))
+        print(self.configuration)
+        print(self.ssh.execute(command, hosts))
     def listHosts(self):
         for host in self.db.listHosts():
             print(host)

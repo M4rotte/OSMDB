@@ -37,7 +37,9 @@ class SQLite:
                             adjacent_up INT DEFAULT 0,
                             adjacent_down INT DEFAULT 0,
                             up INT DEFAULT 0,
-                            down INT DEFAULT 0)"""
+                            down INT DEFAULT 0,
+                            user TEXT,
+                            ssh_key_file TEXT)"""
         
         self.cursor.execute(host_table)
         

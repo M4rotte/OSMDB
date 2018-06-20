@@ -10,13 +10,15 @@ class Cmdline:
         self.translations = translations
         for a in args[1:]:
             a = self.translateOption(a)
-            if a[0] is '-':
-                opt = ''.join(a[1:])
-                self.options[opt] = {}
-            elif opt:
-                self.options[opt] = a
-                opt = False
-            else: self.tags.append(a)
+            try:
+                if a[0] is '-':
+                    opt = ''.join(a[1:])
+                    self.options[opt] = {}
+                elif opt:
+                    self.options[opt] = a
+                    opt = False
+                else: self.tags.append(a)
+            except IndexError: self.options[opt] = a
 
     def translateOption(self, arg):
         """Translate a long option into its short version."""
