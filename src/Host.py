@@ -32,6 +32,7 @@ def ping(addr, timeout=5, number=1, data=b''):
                     return time.time() - start
             return -1
     except PermissionError as e: return tcp_connect(addr)
+    except KeyboardInterrupt: return -1
 
 def tcp_connect(addr, port = 22, timeout = 10):
     """TCP connect."""
@@ -46,6 +47,7 @@ def tcp_connect(addr, port = 22, timeout = 10):
         # 111: Connection refused
         if e.errno not in [111]: return -1 
         else: return time.time() - start
+    except KeyboardInterrupt: pass
     
     return time.time() - start
 
