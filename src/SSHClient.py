@@ -8,6 +8,7 @@ try:
     from cryptography.hazmat.primitives import serialization as crypto_serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.hazmat.backends import default_backend as crypto_default_backend
+    from time import time, strftime
     from hashlib import blake2b
     from signal import SIGALRM
     from time import time
@@ -15,6 +16,7 @@ try:
     from socket import timeout
     from io import StringIO
     import signal
+    from getpass import getpass
 except ImportError as e:
     print(str(e), file=sys.stderr)
     print('Cannot find the module(s) listed above. Exiting.', file=sys.stderr)
@@ -62,7 +64,8 @@ class SSHClient:
 
     def pubkey(self):
         """Return the public key."""
-        if self.key: return self.key.get_base64()
+        if self.key: return self.key.public_key().public_bytes(crypto_serialization.Encoding.OpenSSH, \
+                                    crypto_serialization.PublicFormat.OpenSSH)
         else: return None
 
     def privkey(self):
@@ -194,3 +197,52 @@ class SSHClient:
             self.client.close()
             return [(user, hostname, scripts, str(error))]
 
+    def deploy(self, pubkey, node_handle):
+        """Connect to remote host using password, to put the client key in ~/.ssh/authorized_keys
+           It roughly works like the "ssh-copy-id" OpenSSL command."""
+        (user, host) = node_handle.split('@',1)
+        try:
+            # Connect to remote host using password
+            while True:
+                try:
+                    password = getpass("%s@%s's password: " % (user, host))
+                    self.client.connect(host, username=user, password=password, timeout=float(self.configuration['ssh_client_timeout']),
+                                                                                banner_timeout=float(self.configuration['ssh_banner_timeout']),
+                                                                                auth_timeout=float(self.configuration['ssh_auth_timeout']))
+                    break
+
+                except (paramiko.AuthenticationException,
+                        paramiko.SSHException,
+                        OSError,
+                        EOFError,
+                        ConnectionResetError,
+                        timeout) as e:
+
+                    self.logger.log('Error: {}'.format(e), 2)
+                    return(False,'Key NOT copied for {} ({})'.format(node_handle,e))
+
+            self.client.exec_command('mkdir .ssh')
+            self.client.exec_command('chmod 0700 .ssh')
+            _std = self.client.exec_command('echo "'+pubkey.decode('utf-8')+' ##PAW SERVER KEY## '+strftime("%Y-%m-%d %H:%M:%S")+'" >> .ssh/authorized_keys')
+            _stdout = _std[1]
+            _stderr = _std[2]
+            self.client.exec_command('chmod 0600 .ssh/authorized_keys')
+
+            for line in _stdout:
+                # Process each line in the remote output
+                print(line.strip(), file=sys.stderr)
+
+            for line in _stderr:
+                # Process each line in the remote output
+                print(line.strip(), file=sys.stderr)
+
+        except (paramiko.ssh_exception.AuthenticationException,
+                paramiko.ssh_exception.NoValidConnectionsError,
+                timeout,
+                AttributeError) as e:
+
+            self.logger.log('Error: '+str(e), 2, f=sys.stderr)
+            return (False,'OSMDB NOT deployed on '+node_handle+' ('+str(e)+')')
+
+        self.client.close()
+        return (True,'OSMDB deployed on '+node_handle)

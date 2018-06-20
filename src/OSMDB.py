@@ -25,6 +25,7 @@ class OSMDB:
         self.db = db
         self.configuration = configuration
         self.logger = logger
+        self.ssh = SSHClient.SSHClient(logger=self.logger, configuration=self.configuration)
         
     def __repr__(self): return 'OSMDB'
         
@@ -84,5 +85,11 @@ class OSMDB:
     def listHostUpdates(self):
         for update in self.db.listHostUpdates():
             print(update)
+
+    def deploy(self, pubkey, host_handle):
+        """Add the public key of OSMDB in the authorized_keys file of given host."""
+        self.ssh = SSHClient.SSHClient(logger=self.logger, configuration=self.configuration)
+        self.logger.log('Deploying key “{}” for “{}”'.format(pubkey, host_handle),0)
+        return self.ssh.deploy(pubkey, host_handle)
 
 if __name__ == '__main__': sys.exit(100)
