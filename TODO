@@ -1,7 +1,8 @@
 Port the fix of Cmdline.py to project Paw & PCM (and maybe some other projects) (IndexError on empty option value…)
 
 SSHClient:
- - save/restore key
- - implement a mass-ssh-copy-id command to quickly “deploy” OSMDB: Use the same than in the Paw project
+ - fix crash when config file is missing or wrong
+ - implement a mass-ssh-copy-id command to quickly “deploy” OSMDB: Use the same than in the Paw project (in progress)
+
  
 Host selection: Use the same tag system than in the Paw project
