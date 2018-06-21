@@ -44,7 +44,7 @@ class SSHClient:
         self.configuration['ssh_exec_timeout'] = self.configuration.get('ssh_exec_timeout', 140)
         self.configuration['ssh_auth_timeout'] = self.configuration.get('ssh_auth_timeout', 10)
         self.configuration['ssh_banner_timeout'] = self.configuration.get('ssh_banner_timeout', 40)
-        self.configuration['exec_timeout'] = self.configuration.get('ssh_exec_timeout', 60)
+        self.configuration['exec_timeout'] = self.configuration.get('exec_timeout', 60)
         self.configuration['ssh_default_key'] = self.configuration.get('ssh_default_key', './osmdb_id')
         self.configuration['ssh_default_pubkey'] = self.configuration.get('ssh_default_pubkey', './osmdb_id.pub')
         self.logger = logger
@@ -64,7 +64,7 @@ class SSHClient:
 
     def handleSignal(self, signum, frame):
         
-        if signum == SIGALRM: raise WithdrawException('Execution left unsupervised after {} seconds.'.format(self.configuration['exec_timeout']))
+        if signum == SIGALRM: raise WithdrawException('Execution was still running after {} seconds.'.format(self.configuration['exec_timeout']))
         else: raise Exception('Signal: '+str(signum)+' at: '+str(frame))
 
     def newkey(self):
@@ -90,9 +90,11 @@ class SSHClient:
     def saveKey(self, keyfile, pubkeyfile):
         """Write the key pair to files."""
 
-        with open(keyfile, 'wb') as f: f.write(self.key.private_bytes(encoding=crypto_serialization.Encoding.PEM,
-    format=crypto_serialization.PrivateFormat.TraditionalOpenSSL,
-    encryption_algorithm=crypto_serialization.NoEncryption()))
+        with open(keyfile, 'wb') as f:
+            f.write(self.key.private_bytes(encoding=crypto_serialization.Encoding.PEM,
+                    format=crypto_serialization.PrivateFormat.TraditionalOpenSSL,
+                    encryption_algorithm=crypto_serialization.NoEncryption()))
+        chmod(0o600, keyfile)
         with open(pubkeyfile, 'wb') as f: f.write(self.key.public_key().public_bytes(crypto_serialization.Encoding.OpenSSH, \
     crypto_serialization.PublicFormat.OpenSSH))
         
@@ -144,8 +146,9 @@ class SSHClient:
         except WithdrawException as error:
 
             end = time()
-            self.logger.log('['+user+'@'+host+'] `'+cmdline+'` '+str(error),3)
-            q.put((host.user, host, cmdline, -2, [], [], str(error), start, end))
+            exec_status = 'Execution discarded: {}'.format(error)
+            self.logger.log('[{}@{}] `{}` {}'.format(host.user, host.hostname, cmdline, exec_status),3)
+            q.put((host.user, host, cmdline, -2, [], [], 'Execution discarded: {}'.format(error), start, end))
             self.client.close()
             return False  
 
@@ -167,7 +170,7 @@ class SSHClient:
         chunk_k = 1
         for chunk in chunks(hosts, chunk_size):
             nb_hosts = len(chunk)
-            self.logger.log('Chunk #{}: {}'.format(chunk_k,', '.join(map(str,chunk))),0)
+            self.logger.log('Chunk #{:<3} {}'.format(chunk_k,', '.join(map(str,chunk))),0)
             for host in chunk:
                 proc = Process(target=self._execute, args=(host, cmdline, q))
                 proc.start()
@@ -220,7 +223,7 @@ class SSHClient:
         return_code = 0
         try:
 
-            self.client.connect(host, username=user, password=password, timeout=float(self.configuration['ssh_client_timeout']),
+            self.client.connect(host.hostname, username=user, password=password, timeout=float(self.configuration['ssh_client_timeout']),
                                                                         banner_timeout=float(self.configuration['ssh_banner_timeout']),
                                                                         auth_timeout=float(self.configuration['ssh_auth_timeout']))
 
@@ -236,7 +239,7 @@ class SSHClient:
             return_code = std[1].channel.recv_exit_status()
 
             end = time()
-            self.logger.log('Key {} deployed for {}@{}'.format(b2a_base64(key.get_fingerprint()).decode('utf-8').strip(),user,host),1)
+            self.logger.log('Key {} deployed for {}@{}'.format(b2a_base64(key.get_fingerprint()).decode('utf-8').strip(),user,host.hostname),1)
             q.put((user, host, return_code, stdout, stderr, exec_status, start, end))
             self.client.close()
             return True
@@ -247,7 +250,7 @@ class SSHClient:
                 timeout,OSError,EOFError,ConnectionResetError,AttributeError)  as e:
             
             end = time()
-            self.logger.log('Error: {}'.format(e), 2)
+            self.logger.log('Error in deployement for {}@{}: {}'.format(user, host, e), 3)
             q.put((user, host, -1, [], [], str(e), start, end))
             self.client.close()
             return False
@@ -255,7 +258,7 @@ class SSHClient:
         except WithdrawException as error:
 
             end = time()
-            self.logger.log('['+user+'@'+host+'] Deploy reached timemout! ('+str(error)+')',3)
+            self.logger.log('Deployement for {}@{} reached timemout! ('+str(error)+')',3)
             q.put((user, host, -2, [], [], str(error), start, end))
             self.client.close()
             return False  
@@ -267,14 +270,14 @@ class SSHClient:
         processes = []
         try: chunk_size = int(self.configuration['ssh_chunk_size'])
         except KeyError: chunk_size = 4
-        self.logger.log('Deploying key `{}` on {} hosts in chunks of {} hosts.'.format(self.pubkey(),len(hosts),chunk_size),0)
+        self.logger.log('Deploying key {} on {} hosts in chunks of {} hosts.'.format(b2a_base64(key.get_fingerprint()).decode('utf-8').strip(),len(hosts),chunk_size),0)
         chunk_k = 1
         password = getpass('Password: ')
         for chunk in chunks(hosts, chunk_size):
             nb_hosts = len(chunk)
-            self.logger.log('Chunk #{}: {}'.format(chunk_k,', '.join(map(str,chunk))),0)
+            self.logger.log('Chunk #{:<3} {}'.format(chunk_k,', '.join(map(str,chunk))),0)
             for host in chunk:
-                proc = Process(target=self._deploy, args=(key, host.user, host.hostname, password, q))
+                proc = Process(target=self._deploy, args=(key, host.user, host, password, q))
                 proc.start()
                 processes.append(proc)
             for p in processes: p.join()

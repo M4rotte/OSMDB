@@ -61,7 +61,7 @@ class SQLite:
                                        stdout,stderr TEXT,
                                        status TEXT,
                                        start,end FLOAT,
-                                       FOREIGN KEY(host) REFERENCES host(fqdn))"""
+                                       FOREIGN KEY(fqdn) REFERENCES host(fqdn))"""
         
         self.cursor.execute(execution_table)
 

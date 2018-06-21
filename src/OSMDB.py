@@ -73,8 +73,6 @@ class OSMDB:
 
     def updateHosts(self, ping_delays, network_name = None): self.db.updateHosts(ping_delays, network_name)
     def execOnHosts(self,command='a', hosts = []):
-        # ~ for host in self.db.hosts('UP'):
-            # ~ print(Host.Host(host))
         hosts = list(map(Host.Host, hosts))
         print(self.ssh.execute(command, hosts))
     def listHosts(self, hosts):
