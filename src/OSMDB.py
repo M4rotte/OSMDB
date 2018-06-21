@@ -73,14 +73,14 @@ class OSMDB:
         return hosts
 
     def updateHosts(self, ping_delays, network_name = None): self.db.updateHosts(ping_delays, network_name)
-    def execOnHosts(self,command='a',selector='UP'):
+    def execOnHosts(self,command='a', hosts = []):
         # ~ for host in self.db.hosts('UP'):
             # ~ print(Host.Host(host))
-        hosts = list(map(Host.Host, self.db.hosts('UP')))
+        hosts = list(map(Host.Host, hosts))
         self.ssh = SSHClient.SSHClient(logger=self.logger, configuration=self.configuration)
         print(self.ssh.execute(command, hosts))
-    def listHosts(self):
-        for host in self.db.listHosts():
+    def listHosts(self, hosts):
+        for host in hosts:
             print(host)
     def listHostUpdates(self):
         for update in self.db.listHostUpdates():
@@ -91,5 +91,10 @@ class OSMDB:
         self.ssh = SSHClient.SSHClient(logger=self.logger, configuration=self.configuration)
         self.logger.log('Deploying key “{}” for “{}”'.format(pubkey, host_handle),0)
         return self.ssh.deploy(pubkey, host_handle)
+
+    def selectHosts(self, query):
+        
+        return self.db.hosts(query=query)
+
 
 if __name__ == '__main__': sys.exit(100)

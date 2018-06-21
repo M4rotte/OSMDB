@@ -52,6 +52,15 @@ class SQLite:
         
         self.cursor.execute(host_update_table)
         
+        host_tag_table = """CREATE TABLE IF NOT EXISTS tag (host TEXT,
+                                       tag TEXT,
+                                       description TEXT,
+                                       tag_time INTEGER,
+                                       FOREIGN KEY(host) REFERENCES host(fqdn),
+                                       PRIMARY KEY(host, tag))"""
+
+        self.cursor.execute(host_tag_table)
+        
         self.connection.commit()
 
     def hostAlive(self, hostname):
@@ -199,9 +208,17 @@ class SQLite:
             updates.append('{} {:18} {}/{} {}/{}/{} {}'.format(update_time,source,record[3],record[4],record[5],record[6],record[7],record[8]))
         return updates
 
-    def hosts(self, status = 'UP'):
+    def hosts(self, status = 'UP', query = ''):
         
-        if status is 'UP': query = """SELECT * FROM host WHERE ping_delay <> -1"""
-        elif status is 'DOWN': query = """SELECT * FROM host WHERE ping_delay = -1"""
-        else: query = """SELECT * FROM host WHERE first_up NOT NULL"""
-        return self.cursor.execute(query).fetchall()
+        if not query:
+            if status is 'UP': query = """SELECT * FROM host WHERE ping_delay <> -1"""
+            elif status is 'DOWN': query = """SELECT * FROM host WHERE ping_delay = -1"""
+            else: query = """SELECT * FROM host WHERE first_up NOT NULL"""
+        elif query == '*':
+            query = 'SELECT * FROM host WHERE first_up NOT NULL'
+        else:
+            query = 'SELECT * FROM host WHERE first_up NOT NULL AND {}'.format(query)
+        try: return self.cursor.execute(query).fetchall()
+        except sqlite3.OperationalError as e:
+            self.logger.log('SQLite operational error! ({})'.format(e))
+            return []

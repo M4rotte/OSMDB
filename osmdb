@@ -13,7 +13,9 @@ except ImportError as e:
 short_options = {'--update'    : '-u',
                  '--network'   : '-n',
                  '--list'      : '-l',
-                 '--execute'   : '-e'}
+                 '--execute'   : '-e',
+                 '--deploy'    : '-d',
+                 '--selection' : '-s'}
 cmdline = Cmdline.Cmdline(sys.argv, short_options)
 configuration = Configuration.Configuration()
 logger = Logger.Logger()
@@ -22,18 +24,30 @@ db = DB(configuration.configuration,logger)
 logger.setLogfile(configuration.configuration['log_file'])
 osmdb = OSMDB.OSMDB(configuration.configuration, db, logger)
 
+if cmdline.option('n') in [False,True]: cmdline.options['n'] = OSMDB.getDefaultRoute()
+if cmdline.option('s') in [False]: cmdline.options['s'] = '*'
+
 if cmdline.option('u') in ['host','hosts']:
-    if cmdline.option('n') in [False,True]: cmdline.options['n'] = OSMDB.getDefaultRoute()
     ping_delays = osmdb.pingHosts(cmdline.option('n'))
     osmdb.updateHosts(ping_delays,cmdline.option('n'))
 
-elif cmdline.option('e'):
+if cmdline.option('s'):
+    if cmdline.option('s') is True: helpAndExit('selection')
+    hosts = osmdb.selectHosts(cmdline.option('s'))
+
+if cmdline.option('e'):
     if cmdline.option('e') is True: helpAndExit('execute')
-    osmdb.execOnHosts(cmdline.option('e'))
+    osmdb.execOnHosts(cmdline.option('e'), hosts)
+
 
 if cmdline.option('l') in ['host','hosts']:
-    osmdb.listHosts()
+    osmdb.listHosts(hosts)
+
 elif cmdline.option('l') in ['update','updates']:
     osmdb.listHostUpdates()
+    
+
+
+
 
 # ~ osmdb.deploy(osmdb.ssh.pubkey(), 'root@ivanka')
