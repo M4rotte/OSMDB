@@ -15,6 +15,7 @@ class SQLite:
         try:
             self.logger = logger
             self.configuration = configuration
+            self.configuration['ssh_default_user'] = self.configuration.get('ssh_default_user','root')
             self.connection = sqlite3.connect(self.configuration['db_file'])
             self.cursor = self.connection.cursor()
             self.initialize_db()
@@ -79,11 +80,11 @@ class SQLite:
             else: return False
         except IndexError: return False
 
-    def addHost(self, hostname, fqdn, delay = -1):
+    def addHost(self, hostname, fqdn, delay = -1, user = 'root'):
         """Add a host in database if it doesn’t already exist."""
-        query = """INSERT OR IGNORE INTO host (hostname, fqdn, ping_delay) VALUES (?,?,?)"""
+        query = """INSERT OR IGNORE INTO host (hostname, fqdn, ping_delay, user) VALUES (?,?,?,?)"""
         try:
-            self.cursor.execute(query, (hostname, fqdn, delay))
+            self.cursor.execute(query, (hostname, fqdn, delay, user))
             return True
         except sqlite3.OperationalError as err:
             self.logger.log('Cant’t insert into host table! ({})'.format(err),12)
@@ -91,6 +92,12 @@ class SQLite:
         except Exception as e:
             print(' **!!** '+str(e), file=sys.stderr)
             return False
+        
+    def hostUser(self,fqdn):
+        query = """SELECT user FROM host WHERE fqdn = ?"""
+        res = self.cursor.execute(query, (fqdn,)).fetchone()
+        if res: return res[0]
+        else: return self.configuration['ssh_default_user']
             
     def updateHosts(self, ping_delays, network_name = None):
         
@@ -98,7 +105,8 @@ class SQLite:
         for hostname,fqdn,delay in ping_delays:
             alive = self.hostAlive(hostname)
             seen_once = self.hostSeenOnce(hostname)
-            self.addHost(hostname, fqdn, delay)
+            user = self.hostUser(fqdn)
+            self.addHost(hostname, fqdn, delay, user)
             start = time()
             now = int(start)
             try:

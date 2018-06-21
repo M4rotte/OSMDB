@@ -25,8 +25,7 @@ class OSMDB:
         self.db = db
         self.configuration = configuration
         self.logger = logger
-        self.ssh = SSHClient.SSHClient(logger=self.logger, configuration=self.configuration)
-
+        self.configuration['ping_chunk_size'] = self.configuration.get('ping_chunk_size', 32)
         
     def __repr__(self): return 'OSMDB'
         
@@ -77,7 +76,6 @@ class OSMDB:
         # ~ for host in self.db.hosts('UP'):
             # ~ print(Host.Host(host))
         hosts = list(map(Host.Host, hosts))
-        self.ssh = SSHClient.SSHClient(logger=self.logger, configuration=self.configuration)
         print(self.ssh.execute(command, hosts))
     def listHosts(self, hosts):
         for host in hosts:
@@ -86,13 +84,11 @@ class OSMDB:
         for update in self.db.listHostUpdates():
             print(update)
 
-    def deploy(self, pubkey, host_handle):
+    def deploy(self, key, hosts):
         """Add the public key of OSMDB in the authorized_keys file of given host."""
-        self.ssh = SSHClient.SSHClient(logger=self.logger, configuration=self.configuration)
-        self.logger.log('Deploying key “{}” for “{}”'.format(pubkey, host_handle),0)
-        return self.ssh.deploy(pubkey, host_handle)
+        self.ssh.deploy(key, list(map(Host.Host,hosts)))
 
-    def selectHosts(self, query):
+    def selectHosts(self, query = ''):
         
         return self.db.hosts(query=query)
 

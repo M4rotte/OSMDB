@@ -18,6 +18,7 @@ try:
     from io import StringIO
     import signal
     from getpass import getpass
+    from binascii import b2a_base64
 
 except ImportError as e:
     print(str(e), file=sys.stderr)
@@ -39,12 +40,17 @@ class SSHClient:
         """The SSH client is initialized from default key. A new key is generated if none exists."""
 
         self.configuration = configuration
-        self.configuration['client_timeout'] = self.configuration.get('client_timeout', 10)
-        self.configuration['exec_timeout'] = self.configuration.get('exec_timeout', 10)
-        self.configuration['auth_timeout'] = self.configuration.get('auth_timeout', 10)
-        self.configuration['banner_timeout'] = self.configuration.get('banner_timeout', 10)
+        self.configuration['ssh_client_timeout'] = self.configuration.get('ssh_client_timeout', 30)
+        self.configuration['ssh_exec_timeout'] = self.configuration.get('ssh_exec_timeout', 140)
+        self.configuration['ssh_auth_timeout'] = self.configuration.get('ssh_auth_timeout', 10)
+        self.configuration['ssh_banner_timeout'] = self.configuration.get('ssh_banner_timeout', 40)
+        self.configuration['exec_timeout'] = self.configuration.get('ssh_exec_timeout', 60)
+        self.configuration['ssh_default_key'] = self.configuration.get('ssh_default_key', './osmdb_id')
+        self.configuration['ssh_default_pubkey'] = self.configuration.get('ssh_default_pubkey', './osmdb_id.pub')
         self.logger = logger
-        self.key = self.savedKey(self.configuration['ssh_default_key'])
+        self.rsakey = self.savedKey(self.configuration['ssh_default_key'])
+        try: self.key = self.rsakey.key
+        except AttributeError: self.key = None
         if not self.key: self.newkey()
 
         message = 'Using key "{}"'.format(self.keyhash())
@@ -69,8 +75,7 @@ class SSHClient:
 
     def pubkey(self):
         """Return the public key."""
-        if self.key: return self.key.public_key().public_bytes(crypto_serialization.Encoding.OpenSSH, \
-                                    crypto_serialization.PublicFormat.OpenSSH)
+        if self.rsakey: return self.rsakey.get_base64()
         else: return None
 
 
@@ -95,7 +100,7 @@ class SSHClient:
     def savedKey(self, keyfile):
         """Get private key from file."""
         try:
-            return paramiko.RSAKey.from_private_key_file(keyfile).key
+            return paramiko.RSAKey.from_private_key_file(keyfile)
         except FileNotFoundError:
             return None
 
@@ -107,23 +112,23 @@ class SSHClient:
 
         return h.hexdigest()
 
-    def _execute(self, user, host, cmdline, q):
+    def _execute(self, host, cmdline, q):
         """Execute a command on a host and put the result in a queue."""
         start  = time()
         try:
             exec_status = ''
             return_code = 0
-            self.client.connect(host.hostname, username=user, pkey=self.sshkey(), timeout=float(self.configuration['client_timeout']),
-                                banner_timeout=float(self.configuration['banner_timeout']), auth_timeout=float(self.configuration['auth_timeout']))
-            std    = self.client.exec_command(cmdline, timeout=float(self.configuration['exec_timeout']))
+            self.client.connect(host.hostname, username=host.user, pkey=self.sshkey(), timeout=float(self.configuration['ssh_client_timeout']),
+                                banner_timeout=float(self.configuration['ssh_banner_timeout']), auth_timeout=float(self.configuration['ssh_auth_timeout']))
+            std    = self.client.exec_command(cmdline, timeout=float(self.configuration['ssh_exec_timeout']))
             signal.alarm(int(self.configuration['exec_timeout']))
             signal.signal(signal.SIGALRM, self.handleSignal)
-            self.logger.log('{}@{}> {}'.format(user,host.hostname,cmdline), 0)
+            self.logger.log('{}@{}> {}'.format(host.user,host.hostname,cmdline), 0)
             return_code = std[1].channel.recv_exit_status()
             stdout = list(std[1])
             stderr = list(std[2])
             end    = time()
-            q.put((user, host, cmdline, return_code, stdout, stderr, exec_status, start, end))
+            q.put((host.user, host, cmdline, return_code, stdout, stderr, exec_status, start, end))
             self.client.close()
 
         except (paramiko.ssh_exception.AuthenticationException,
@@ -131,8 +136,8 @@ class SSHClient:
                 paramiko.ssh_exception.SSHException,
                 timeout,OSError,EOFError,ConnectionResetError,AttributeError) as error:
             end = time()
-            self.logger.log('[{}@{}] `{}` {}'.format(user,host.hostname,cmdline,error),3)
-            q.put((user , host, cmdline, -1, [], [], str(error), start, end))
+            self.logger.log('[{}@{}] `{}` {}'.format(host.user,host.hostname,cmdline,error),3)
+            q.put((host.user , host, cmdline, -1, [], [], str(error), start, end))
             self.client.close()
             return False
             
@@ -140,7 +145,7 @@ class SSHClient:
 
             end = time()
             self.logger.log('['+user+'@'+host+'] `'+cmdline+'` '+str(error),3)
-            q.put((user, host, cmdline, -2, [], [], str(error), start, end))
+            q.put((host.user, host, cmdline, -2, [], [], str(error), start, end))
             self.client.close()
             return False  
 
@@ -164,7 +169,7 @@ class SSHClient:
             nb_hosts = len(chunk)
             self.logger.log('Chunk #{}: {}'.format(chunk_k,', '.join(map(str,chunk))),0)
             for host in chunk:
-                proc = Process(target=self._execute, args=(self.hostUser(host), host, cmdline, q))
+                proc = Process(target=self._execute, args=(host, cmdline, q))
                 proc.start()
                 processes.append(proc)
             for p in processes: p.join()
@@ -205,53 +210,76 @@ class SSHClient:
             self.client.close()
             return [(user, hostname, scripts, str(error))]
 
-    def deploy(self, pubkey, node_handle):
-        """Connect to remote host using password, to put the client key in ~/.ssh/authorized_keys
+    def _deploy(self, key, user, host, password, q):
+        """Connect to remote host using password, to put the client key in ~/.ssh/authorized_keys.
+           Put result in queue.
            It roughly works like the "ssh-copy-id" OpenSSL command."""
-        (user, host) = node_handle.split('@',1)
+        pubkey = self.pubkey()
+        start = time()
+        exec_status = ''
+        return_code = 0
         try:
-            # Connect to remote host using password
-            while True:
-                try:
-                    password = getpass("%s@%s's password: " % (user, host))
-                    self.client.connect(host, username=user, password=password, timeout=float(self.configuration['ssh_client_timeout']),
-                                                                                banner_timeout=float(self.configuration['ssh_banner_timeout']),
-                                                                                auth_timeout=float(self.configuration['ssh_auth_timeout']))
-                    break
 
-                except (paramiko.AuthenticationException,
-                        paramiko.SSHException,
-                        OSError,
-                        EOFError,
-                        ConnectionResetError,
-                        timeout) as e:
+            self.client.connect(host, username=user, password=password, timeout=float(self.configuration['ssh_client_timeout']),
+                                                                        banner_timeout=float(self.configuration['ssh_banner_timeout']),
+                                                                        auth_timeout=float(self.configuration['ssh_auth_timeout']))
 
-                    self.logger.log('Error: {}'.format(e), 2)
-                    return(False,'Key NOT copied for {} ({})'.format(node_handle,e))
+            self.client.exec_command('mkdir .ssh', timeout=float(self.configuration['ssh_exec_timeout']))
+            self.client.exec_command('chmod 0700 .ssh', timeout=float(self.configuration['ssh_exec_timeout']))
+            self.client.exec_command('echo "ssh-rsa '+pubkey+' ## OSMDB KEY ## '+strftime("%Y-%m-%d %H:%M:%S")+'" >> .ssh/authorized_keys', \
+                                              timeout=float(self.configuration['ssh_exec_timeout']))
+            std = self.client.exec_command('chmod 0600 .ssh/authorized_keys', timeout=float(self.configuration['exec_timeout']))
+            signal.alarm(int(self.configuration['exec_timeout']))
+            signal.signal(signal.SIGALRM, self.handleSignal)
+            stdout = list(std[1])
+            stderr = list(std[2])
+            return_code = std[1].channel.recv_exit_status()
 
-            self.client.exec_command('mkdir .ssh')
-            self.client.exec_command('chmod 0700 .ssh')
-            _std = self.client.exec_command('echo "'+pubkey.decode('utf-8')+' ##PAW SERVER KEY## '+strftime("%Y-%m-%d %H:%M:%S")+'" >> .ssh/authorized_keys')
-            _stdout = _std[1]
-            _stderr = _std[2]
-            self.client.exec_command('chmod 0600 .ssh/authorized_keys')
-
-            for line in _stdout:
-                # Process each line in the remote output
-                print(line.strip(), file=sys.stderr)
-
-            for line in _stderr:
-                # Process each line in the remote output
-                print(line.strip(), file=sys.stderr)
+            end = time()
+            self.logger.log('Key {} deployed for {}@{}'.format(b2a_base64(key.get_fingerprint()).decode('utf-8').strip(),user,host),1)
+            q.put((user, host, return_code, stdout, stderr, exec_status, start, end))
+            self.client.close()
+            return True
 
         except (paramiko.ssh_exception.AuthenticationException,
                 paramiko.ssh_exception.NoValidConnectionsError,
-                timeout,
-                AttributeError) as e:
+                paramiko.ssh_exception.SSHException,
+                timeout,OSError,EOFError,ConnectionResetError,AttributeError)  as e:
+            
+            end = time()
+            self.logger.log('Error: {}'.format(e), 2)
+            q.put((user, host, -1, [], [], str(e), start, end))
+            self.client.close()
+            return False
 
-            self.logger.log('Error: '+str(e), 2, f=sys.stderr)
-            return (False,'OSMDB NOT deployed on '+node_handle+' ('+str(e)+')')
+        except WithdrawException as error:
 
-        self.client.close()
-        return (True,'OSMDB deployed on '+node_handle)
+            end = time()
+            self.logger.log('['+user+'@'+host+'] Deploy reached timemout! ('+str(error)+')',3)
+            q.put((user, host, -2, [], [], str(error), start, end))
+            self.client.close()
+            return False  
 
+    def deploy(self, key, hosts):
+        
+        q = Queue()
+        runs = []
+        processes = []
+        try: chunk_size = int(self.configuration['ssh_chunk_size'])
+        except KeyError: chunk_size = 4
+        self.logger.log('Deploying key `{}` on {} hosts in chunks of {} hosts.'.format(self.pubkey(),len(hosts),chunk_size),0)
+        chunk_k = 1
+        password = getpass('Password: ')
+        for chunk in chunks(hosts, chunk_size):
+            nb_hosts = len(chunk)
+            self.logger.log('Chunk #{}: {}'.format(chunk_k,', '.join(map(str,chunk))),0)
+            for host in chunk:
+                proc = Process(target=self._deploy, args=(key, host.user, host.hostname, password, q))
+                proc.start()
+                processes.append(proc)
+            for p in processes: p.join()
+            for _ in range(0, nb_hosts):
+                runs.append(q.get())
+            chunk_k += 1
+
+        return runs

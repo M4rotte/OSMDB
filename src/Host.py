@@ -69,7 +69,10 @@ class Host:
                 self.ping = host[3]
                 self.first = host[4]
             except IndexError: pass
-        
+            try:
+                self.user = host[13]
+            except IndexError: pass
+            
     def process(self, address, queue):
     
         self.address = str(address)
