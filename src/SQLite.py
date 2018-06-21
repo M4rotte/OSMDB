@@ -52,7 +52,19 @@ class SQLite:
                                        duration FLOAT)"""
         
         self.cursor.execute(host_update_table)
+
+        execution_table = """CREATE TABLE IF NOT EXISTS execution (
+                                       user TEXT,
+                                       fqdn TEXT,
+                                       cmdline TEXT,
+                                       return_code INT,
+                                       stdout,stderr TEXT,
+                                       status TEXT,
+                                       start,end FLOAT,
+                                       FOREIGN KEY(host) REFERENCES host(fqdn))"""
         
+        self.cursor.execute(execution_table)
+
         host_tag_table = """CREATE TABLE IF NOT EXISTS tag (host TEXT,
                                        tag TEXT,
                                        description TEXT,
