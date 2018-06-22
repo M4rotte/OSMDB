@@ -272,10 +272,8 @@ class SQLite:
             _hosts = self.cursor.execute(query, (host[2],)).fetchall()
             if len(_hosts) < 2: continue
             else:
-                print(host)
                 ads = []
                 for a in _hosts: ads.append(a[0])
-                print(ads)
                 fqdn_list = ', '.join(ads)
                 self.logger.log('Address “{}” has the following FQDNs: {}'.format(host[2],fqdn_list), 0)
                 for h in _hosts[1:]:
