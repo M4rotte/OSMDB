@@ -15,7 +15,8 @@ short_options = {'--update'    : '-u',
                  '--list'      : '-l',
                  '--execute'   : '-e',
                  '--deploy'    : '-d',
-                 '--selection' : '-s'}
+                 '--selection' : '-s',
+                 '--purge'     : '-P'}
 cmdline = Cmdline.Cmdline(sys.argv, short_options)
 configuration = Configuration.Configuration()
 logger = Logger.Logger()
@@ -47,7 +48,10 @@ if cmdline.option('e'):
     if cmdline.option('e') is True: helpAndExit('execute')
     osmdb.execOnHosts(cmdline.option('e'), hosts)
 
-
+if cmdline.option('P'):
+    if cmdline.option('P') is True: osmdb.purgeHosts()
+    else: osmdb.purgeHosts(cmdline.option('P'))
+    
 
 if cmdline.option('l') in ['host','hosts']:
     hosts = db.listHosts()

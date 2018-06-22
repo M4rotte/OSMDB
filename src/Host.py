@@ -83,7 +83,7 @@ class Host:
             self.hostname = self.address
             self.fqdn = self.address
         finally:
-            queue.put((self.hostname,self.fqdn,self.ping()))
+            queue.put((self.hostname,self.fqdn,self.ping(),self.address))
 
     def __repr__(self):
         

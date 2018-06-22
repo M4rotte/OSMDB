@@ -28,7 +28,8 @@ class Execution(dict):
         if self['return_code'] == 0: status_symbol = '✓'
         elif self['return_code'] > 0: status_symbol = '❌'
         else: status_symbol = '⚠'
-        return '{:32} {} {}'.format(handle, status_symbol, output)
+        time = round(self['end'] - self['start'], 3)
+        return '{:32} {:16} {} {:60} ({})'.format(handle, self['cmdline'], status_symbol, output, time)
 
 
 if __name__ == '__main__': sys.exit(100)

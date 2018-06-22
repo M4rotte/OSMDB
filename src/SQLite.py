@@ -92,11 +92,11 @@ class SQLite:
             else: return False
         except IndexError: return False
 
-    def addHost(self, hostname, fqdn, delay = -1, user = 'root'):
+    def addHost(self, hostname, fqdn, delay = -1, user = 'root', ip = ''):
         """Add a host in database if it doesn’t already exist."""
-        query = """INSERT OR IGNORE INTO host (hostname, fqdn, ping_delay, user) VALUES (?,?,?,?)"""
+        query = """INSERT OR IGNORE INTO host (hostname, fqdn, ping_delay, user, ip) VALUES (?,?,?,?,?)"""
         try:
-            self.cursor.execute(query, (hostname, fqdn, delay, user))
+            self.cursor.execute(query, (hostname, fqdn, delay, user, ip))
             return True
         except sqlite3.OperationalError as err:
             self.logger.log('Cant’t insert into host table! ({})'.format(err),12)
@@ -114,11 +114,11 @@ class SQLite:
     def updateHosts(self, ping_delays, network_name = None):
         
         nb_up = nb_down = nb_new = nb_lost = nb_back = 0
-        for hostname,fqdn,delay in ping_delays:
+        for hostname,fqdn,delay,ip in ping_delays:
             alive = self.hostAlive(hostname)
             seen_once = self.hostSeenOnce(hostname)
             user = self.hostUser(fqdn)
-            self.addHost(hostname, fqdn, delay, user)
+            self.addHost(hostname, fqdn, delay, user, ip)
             start = time()
             now = int(start)
             try:
@@ -263,3 +263,25 @@ class SQLite:
         query = """SELECT * FROM execution ORDER BY end DESC"""
         return self.cursor.execute(query).fetchall()
         
+    def purgeHosts(self, addresses):
+        query = """SELECT * FROM host WHERE ip LIKE ?"""
+        hosts = self.cursor.execute(query, (addresses,)).fetchall()
+        deleted = []
+        for host in hosts:
+            query = """SELECT fqdn,ip FROM host WHERE ip = ? ORDER BY last_check DESC"""
+            _hosts = self.cursor.execute(query, (host[2],)).fetchall()
+            if len(_hosts) < 2: continue
+            else:
+                print(host)
+                ads = []
+                for a in _hosts: ads.append(a[0])
+                print(ads)
+                fqdn_list = ', '.join(ads)
+                self.logger.log('Address “{}” has the following FQDNs: {}'.format(host[2],fqdn_list), 0)
+                for h in _hosts[1:]:
+                    self.logger.log('Deleting host “{}” having IP {}'.format(h[0],h[1]), 1)
+                    query = """DELETE FROM host WHERE fqdn = ?"""
+                    self.cursor.execute(query, (h[0],))
+                    deleted.append(host)
+        self.connection.commit()
+        return deleted

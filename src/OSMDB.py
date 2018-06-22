@@ -94,5 +94,7 @@ class OSMDB:
             execution_l[4] = execution[4].split('\n')
             execution_l[5] = execution[5].split('\n')
             print(Execution.Execution(execution_l))
+    def purgeHosts(self, addresses = '%'):
+        lprint(map(Host.Host,self.db.purgeHosts(addresses)))
 
 if __name__ == '__main__': sys.exit(100)
