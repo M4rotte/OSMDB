@@ -65,6 +65,21 @@ class SQLite:
         
         self.cursor.execute(execution_table)
 
+        url_table = """CREATE TABLE IF NOT EXISTS URL (host TEXT,
+                                       proto TEXT,
+                                       path TEXT,
+                                       port INT,
+                                       user TEXT,
+                                       password TEXT,
+                                       check_time INTEGER,
+                                       status TEXT,
+                                       content TEXT,
+                                       certificate TEXT,
+                                       expire INT,
+                                       PRIMARY KEY(proto,host,path))"""
+
+        self.cursor.execute(url_table)
+
         host_tag_table = """CREATE TABLE IF NOT EXISTS tag (host TEXT,
                                        tag TEXT,
                                        description TEXT,
@@ -189,9 +204,11 @@ class SQLite:
             return False
         return True
 
-    def listHosts(self):
+    def listHosts(self, query):
         
-        query = """SELECT * FROM host WHERE first_up NOT NULL ORDER BY last_change DESC"""
+        if not query or query is '*': query = ''
+        else: query = 'AND '+query
+        query = 'SELECT * FROM host WHERE first_up NOT NULL {} ORDER BY last_change DESC'.format(query)
         results = self.cursor.execute(query).fetchall()
         hosts = []
         for record in results:
@@ -238,7 +255,8 @@ class SQLite:
             query = 'SELECT * FROM host WHERE first_up NOT NULL'
         else:
             query = 'SELECT * FROM host WHERE first_up NOT NULL AND {}'.format(query)
-        try: return self.cursor.execute(query).fetchall()
+        try:
+            return self.cursor.execute(query).fetchall()
         except sqlite3.OperationalError as e:
             self.logger.log('SQLite operational error! ({})'.format(e))
             return []

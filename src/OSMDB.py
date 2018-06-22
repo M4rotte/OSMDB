@@ -96,5 +96,36 @@ class OSMDB:
             print(Execution.Execution(execution_l))
     def purgeHosts(self, addresses = '%'):
         lprint(map(Host.Host,self.db.purgeHosts(addresses)))
+    
+    def addURL(self,url):
+        split = list(filter(None, url.split('/')))
+        proto = split[0].strip(':')
+        host_part = split[1]
+        path = '/'+'/'.join(split[2:])
+        hsplit = host_part.split('@',2)
+        if len(hsplit) == 2:
+            cred = hsplit[0]
+            socket = hsplit[1]
+        else:
+            cred = ''
+            socket = hsplit[0]
+        ssplit = socket.split(':',2)
+        if len(ssplit) == 2:
+            server = ssplit[0]
+            port = ssplit[1]
+        else:
+            port = ''
+            server = hsplit[0]
+        csplit = cred.split(':',2)
+        if len(csplit) == 2:
+            user = csplit[0]
+            password = csplit[1]
+        else:
+            password = ''
+            user = csplit[0]
+
+        return self.db.addURL(proto,user,password,server,port,path)
+        
+
 
 if __name__ == '__main__': sys.exit(100)

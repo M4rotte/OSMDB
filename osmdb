@@ -16,7 +16,9 @@ short_options = {'--update'    : '-u',
                  '--execute'   : '-e',
                  '--deploy'    : '-d',
                  '--selection' : '-s',
-                 '--purge'     : '-P'}
+                 '--purge'     : '-P',
+                 '--add'       : '-A'}
+                 
 cmdline = Cmdline.Cmdline(sys.argv, short_options)
 configuration = Configuration.Configuration()
 logger = Logger.Logger()
@@ -28,13 +30,21 @@ osmdb = OSMDB.OSMDB(configuration.configuration, db, logger)
 if cmdline.option('n') in [False,True]: cmdline.options['n'] = OSMDB.getDefaultRoute()
 if cmdline.option('s') in [False]: cmdline.options['s'] = '*'
 
+if cmdline.option('A') is True: helpAndExit('add-url')
+if cmdline.option('A') == 'url':
+    for url in cmdline.tags:
+        print(osmdb.addURL(url))
+    exit(0)
+if cmdline.option('A'):
+    print('Unknown object type: `{}`'.format(cmdline.option('A')), file=sys.stderr)
+    helpAndExit('add')
+
 if cmdline.option('u') in ['host','hosts']:
     ping_delays = osmdb.pingHosts(cmdline.option('n'))
     osmdb.updateHosts(ping_delays,cmdline.option('n'))
 
-if cmdline.option('s'):
-    if cmdline.option('s') is True: helpAndExit('selection')
-    hosts = osmdb.selectHosts(cmdline.option('s'))
+if cmdline.option('s') is True: helpAndExit('selection')
+hosts = osmdb.selectHosts(cmdline.option('s'))
 
 if 'd' in cmdline.options or 'e' in cmdline.options:
     ssh_client = SSHClient.SSHClient(logger=logger, configuration=configuration.configuration)
@@ -54,7 +64,7 @@ if cmdline.option('P'):
     
 
 if cmdline.option('l') in ['host','hosts']:
-    hosts = db.listHosts()
+    hosts = db.listHosts(cmdline.option('s'))
     osmdb.listHosts(hosts)
 
 elif cmdline.option('l') in ['update','updates']:
