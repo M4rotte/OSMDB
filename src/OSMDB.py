@@ -8,7 +8,8 @@ import Host, Logger
 from multiprocessing import Process, Queue
 from datetime import timedelta
 from time import time
-import Host, SSHClient, Execution
+import Host, SSHClient, Execution, URL
+
 
 def getDefaultRoute(): 
     """Call the external command `ip route`. This only works with Linux. The default route is used if no network is given in the command line (--network)."""
@@ -97,35 +98,19 @@ class OSMDB:
     def purgeHosts(self, addresses = '%'):
         lprint(map(Host.Host,self.db.purgeHosts(addresses)))
     
+   
     def addURL(self,url):
-        split = list(filter(None, url.split('/')))
-        proto = split[0].strip(':')
-        host_part = split[1]
-        path = '/'+'/'.join(split[2:])
-        hsplit = host_part.split('@',2)
-        if len(hsplit) == 2:
-            cred = hsplit[0]
-            socket = hsplit[1]
-        else:
-            cred = ''
-            socket = hsplit[0]
-        ssplit = socket.split(':',2)
-        if len(ssplit) == 2:
-            server = ssplit[0]
-            port = ssplit[1]
-        else:
-            port = ''
-            server = hsplit[0]
-        csplit = cred.split(':',2)
-        if len(csplit) == 2:
-            user = csplit[0]
-            password = csplit[1]
-        else:
-            password = ''
-            user = csplit[0]
 
-        return self.db.addURL(proto,user,password,server,port,path)
-        
+        proto,user,password,server,port,path = URL.splitURL(url)
+        if not server:
+            print('Invalid URL: {}'.format(url))
+            return False
+        action = self.db.addURL((proto,user,password,server,port,path))
+        if action != True:
+            self.logger.log('Can’t add “{}”: {}'.format(url,action))
+        else: self.logger.log('Added URL “{}“'.format(url))
 
+    def listURL(self):
+        return list(map(URL.URL, self.db.urls()))
 
 if __name__ == '__main__': sys.exit(100)

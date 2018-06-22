@@ -33,7 +33,7 @@ if cmdline.option('s') in [False]: cmdline.options['s'] = '*'
 if cmdline.option('A') is True: helpAndExit('add-url')
 if cmdline.option('A') == 'url':
     for url in cmdline.tags:
-        print(osmdb.addURL(url))
+        osmdb.addURL(url)
     exit(0)
 if cmdline.option('A'):
     print('Unknown object type: `{}`'.format(cmdline.option('A')), file=sys.stderr)
@@ -73,6 +73,9 @@ elif cmdline.option('l') in ['update','updates']:
 elif cmdline.option('l') in ['exec','executions']:
     osmdb.listExecutions()
 
+elif cmdline.option('l') in ['url']:
+   for url in osmdb.listURL():
+       print(url)
 
 
 # ~ osmdb.deploy(osmdb.ssh.pubkey(), 'root@ivanka')

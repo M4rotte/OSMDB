@@ -65,7 +65,7 @@ class SQLite:
         
         self.cursor.execute(execution_table)
 
-        url_table = """CREATE TABLE IF NOT EXISTS URL (host TEXT,
+        url_table = """CREATE TABLE IF NOT EXISTS url (host TEXT,
                                        proto TEXT,
                                        path TEXT,
                                        port INT,
@@ -76,7 +76,7 @@ class SQLite:
                                        content TEXT,
                                        certificate TEXT,
                                        expire INT,
-                                       PRIMARY KEY(proto,host,path))"""
+                                       PRIMARY KEY(proto,host,path,user,port))"""
 
         self.cursor.execute(url_table)
 
@@ -107,8 +107,9 @@ class SQLite:
             else: return False
         except IndexError: return False
 
-    def addHost(self, hostname, fqdn, delay = -1, user = 'root', ip = ''):
+    def addHost(self, hostname, fqdn, delay = -1, user = '', ip = ''):
         """Add a host in database if it doesn’t already exist."""
+        if user == '': user = self.configuration['ssh_default_user']
         query = """INSERT OR IGNORE INTO host (hostname, fqdn, ping_delay, user, ip) VALUES (?,?,?,?,?)"""
         try:
             self.cursor.execute(query, (hostname, fqdn, delay, user, ip))
@@ -301,3 +302,17 @@ class SQLite:
                     deleted.append(host)
         self.connection.commit()
         return deleted
+
+    def addURL(self, url):
+        try:
+            self.addHost(url[3], url[3], -1, '', '')
+            query = """INSERT INTO URL (proto,user,password,host,port,path) VALUES (?,?,?,?,?,?)"""
+            self.cursor.execute(query, url)
+            self.connection.commit()
+            return True
+        except sqlite3.IntegrityError as e:
+            return str(e)
+            
+    def urls(self):
+        query = """SELECT * FROM url"""
+        return self.cursor.execute(query).fetchall()
