@@ -277,7 +277,7 @@ class SQLite:
                 fqdn_list = ', '.join(ads)
                 self.logger.log('Address “{}” has the following FQDNs: {}'.format(host[2],fqdn_list), 0)
                 for h in _hosts[1:]:
-                    self.logger.log('Deleting host “{}” having IP {}'.format(h[0],h[1]), 1)
+                    self.logger.log('Delete host “{}” having IP {}'.format(h[0],h[1]), 1)
                     query = """DELETE FROM host WHERE fqdn = ?"""
                     self.cursor.execute(query, (h[0],))
                     deleted.append(host)
