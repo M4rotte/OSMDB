@@ -214,11 +214,11 @@ class SQLite:
         hosts = []
         for record in results:
             hostname = record[0]
-            if record[3] == -1: status = 'DOWN'
-            else: status = 'UP'
+            if record[3] == -1: status = '❌'
+            else: status = '✓'
             availability = record[11] * 100 / (record[11] + record[12])
             check = humanTime(record[5])
-            if status == 'DOWN':
+            if status == '❌':
                 last = humanTime(record[6])
                 last_nb = record[10]
             else:
