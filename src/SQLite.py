@@ -242,3 +242,24 @@ class SQLite:
         except sqlite3.OperationalError as e:
             self.logger.log('SQLite operational error! ({})'.format(e))
             return []
+
+    def addExecutions(self, executions):
+        """Add executions in database."""
+        query = """INSERT INTO execution (user,fqdn,cmdline,return_code,stdout,stderr,status,start,end) VALUES 
+                         (:user,:host,:cmdline,:return_code,:stdout,:stderr,:status,:start,:end)"""
+        try:
+            self.cursor.executemany(query, executions)
+            self.connection.commit()
+            return True
+        except sqlite3.OperationalError as err:
+            self.logger.log('Cant’t insert into execution table! ({})'.format(err),12)
+            return False
+        except Exception as e:
+            print(' **!!** '+str(e), file=sys.stderr)
+            return False
+
+    def listExecutions(self):
+        
+        query = """SELECT * FROM execution ORDER BY end DESC"""
+        return self.cursor.execute(query).fetchall()
+        

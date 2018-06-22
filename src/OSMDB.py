@@ -8,7 +8,7 @@ import Host, Logger
 from multiprocessing import Process, Queue
 from datetime import timedelta
 from time import time
-import Host, SSHClient
+import Host, SSHClient, Execution
 
 def getDefaultRoute(): 
     """Call the external command `ip route`. This only works with Linux. The default route is used if no network is given in the command line (--network)."""
@@ -17,6 +17,10 @@ def getDefaultRoute():
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n): yield l[i:i + n]
+
+def lprint(l):
+    if type(l) is not list: l = list(l)
+    for i in l: print(i)
 
 class OSMDB:
     """The Overly Simple Management Database main object."""
@@ -55,12 +59,9 @@ class OSMDB:
                 for address in chunk:
                     host = Host.Host()
                     Process(target=host.process, args=(address, queue)).start()
-
                 for host in chunk:
                     hosts.append(queue.get())
-                    
                 batch_index += 1
-        
             end = time()
             elapsed = str(timedelta(seconds=(end - start)))
             rate = len(addresses) / (end - start)
@@ -74,21 +75,24 @@ class OSMDB:
     def updateHosts(self, ping_delays, network_name = None): self.db.updateHosts(ping_delays, network_name)
     def execOnHosts(self,command='a', hosts = []):
         hosts = list(map(Host.Host, hosts))
-        print(self.ssh.execute(command, hosts))
+        executions = list(map(Execution.Execution, self.ssh.execute(command, hosts)))
+        lprint(executions)
+        self.db.addExecutions(executions)
     def listHosts(self, hosts):
-        for host in hosts:
-            print(host)
+        lprint(hosts)
     def listHostUpdates(self):
-        for update in self.db.listHostUpdates():
-            print(update)
-
+        lprint(self.db.listHostUpdates())
     def deploy(self, key, hosts):
-        """Add the public key of OSMDB in the authorized_keys file of given host."""
+        """Add the public key of OSMDB in the authorized_keys file of the given hosts."""
         self.ssh.deploy(key, list(map(Host.Host,hosts)))
-
     def selectHosts(self, query = ''):
-        
         return self.db.hosts(query=query)
-
+    def listExecutions(self):
+        for execution in self.db.listExecutions():
+            execution_l = list(execution)
+            execution_l[1] = Host.Host((execution[1],execution[1],None))
+            execution_l[4] = execution[4].split('\n')
+            execution_l[5] = execution[5].split('\n')
+            print(Execution.Execution(execution_l))
 
 if __name__ == '__main__': sys.exit(100)

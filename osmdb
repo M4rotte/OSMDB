@@ -56,7 +56,8 @@ if cmdline.option('l') in ['host','hosts']:
 elif cmdline.option('l') in ['update','updates']:
     osmdb.listHostUpdates()
     
-
+elif cmdline.option('l') in ['exec','executions']:
+    osmdb.listExecutions()
 
 
 

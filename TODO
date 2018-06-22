@@ -1,6 +1,7 @@
 SSHClient:
 
- - Permit to have an alternate key per host like for username
+ - Permit to have an alternate key per host, like is is for username
+ - Better way to use the multiple processes, so the next chunks may start before all the previous chunk has finished (use select() ?…).
 
  
-Host selection: Use the same tag system than in the Paw project
+Host selection: Use the same tag system than in the Paw project ?

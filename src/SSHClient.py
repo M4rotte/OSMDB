@@ -179,7 +179,7 @@ class SSHClient:
             for _ in range(0, nb_hosts):
                 runs.append(q.get())
             chunk_k += 1
-
+        print(runs)
         return runs
 
     def executeScripts(self, hostname, scripts):
