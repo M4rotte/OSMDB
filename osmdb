@@ -30,10 +30,16 @@ osmdb = OSMDB.OSMDB(configuration.configuration, db, logger)
 if cmdline.option('n') in [False,True]: cmdline.options['n'] = OSMDB.getDefaultRoute()
 if cmdline.option('s') in [False]: cmdline.options['s'] = '*'
 
-if cmdline.option('A') is True: helpAndExit('add-url')
+if cmdline.option('A') is True: helpAndExit('add-all')
 if cmdline.option('A') == 'url':
+    if not cmdline.hasTag(): helpAndExit('add-url')
     for url in cmdline.tags:
         osmdb.addURL(url)
+    exit(0)
+elif cmdline.option('A') == 'host':
+    if not cmdline.hasTag(): helpAndExit('add-host')
+    for host in cmdline.tags:
+        osmdb.addHost(host)
     exit(0)
 if cmdline.option('A'):
     print('Unknown object type: `{}`'.format(cmdline.option('A')), file=sys.stderr)

@@ -41,6 +41,10 @@ class Cmdline:
     def listOptions(self):
         for o,v in self.options.items(): yield str(o)
 
+    def hasTag(self):
+        if len(self.tags) == 0: return False
+        else: return True
+
     def dump(self):
         """Print the Option object to stdout."""
         print('OPTIONS  : '+str(self.options))

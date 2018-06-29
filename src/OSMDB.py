@@ -5,6 +5,7 @@ import sys
 import ipaddress
 import subprocess
 import Host, Logger
+import socket
 from multiprocessing import Process, Queue
 from datetime import timedelta
 from time import time
@@ -98,6 +99,13 @@ class OSMDB:
     def purgeHosts(self, addresses = '%'):
         lprint(map(Host.Host,self.db.purgeHosts(addresses)))
     
+    def addHost(self, hostname):
+        fqdn = socket.getfqdn(hostname)
+        try: ip = socket.gethostbyname(hostname)
+        except socket.gaierror as e:
+            # ~ print('“{}”: {}'.format(hostname,e))
+            ip = ''
+        self.db.addHost(hostname, fqdn, ip=ip)
    
     def addURL(self,url):
 

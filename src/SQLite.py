@@ -7,7 +7,10 @@ import datetime
 import Logger
 
 def humanTime(timestamp):
-    return datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    try:
+        return datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    except Exception as e:
+        return datetime.datetime.fromtimestamp(0).strftime('%Y-%m-%d %H:%M:%S')
 
 class SQLite:
     def __init__(self, configuration, logger = Logger.Logger()):
@@ -110,10 +113,18 @@ class SQLite:
     def addHost(self, hostname, fqdn, delay = -1, user = '', ip = ''):
         """Add a host in database if it doesn’t already exist."""
         if user == '': user = self.configuration['ssh_default_user']
+        pre_query = """SELECT MAX(rowid) FROM host"""
+        last_id = self.cursor.execute(pre_query).fetchone()[0]
         query = """INSERT OR IGNORE INTO host (hostname, fqdn, ping_delay, user, ip) VALUES (?,?,?,?,?)"""
         try:
             self.cursor.execute(query, (hostname, fqdn, delay, user, ip))
-            return True
+            if self.cursor.lastrowid > last_id:
+                self.logger.log('Host “{}” inserted into database.'.format(hostname),0)
+                self.connection.commit()
+                return True
+            else:
+                print(self.listHosts('hostname = "{}"'.format(hostname), seen_up=False)[0])
+                return False
         except sqlite3.OperationalError as err:
             self.logger.log('Cant’t insert into host table! ({})'.format(err),12)
             return False
@@ -205,18 +216,24 @@ class SQLite:
             return False
         return True
 
-    def listHosts(self, query):
+    def listHosts(self, query, seen_up = True):
         
-        if not query or query is '*': query = ''
-        else: query = 'AND '+query
-        query = 'SELECT * FROM host WHERE first_up NOT NULL {} ORDER BY last_change DESC'.format(query)
+        if seen_up is True:
+            if not query or query is '*': query = ''
+            else: query = 'AND '+query
+            query = 'SELECT * FROM host WHERE first_up NOT NULL {} ORDER BY last_change DESC'.format(query)
+        else:
+            if not query or query is '*': query = ''
+            query = 'SELECT * FROM host WHERE {} ORDER BY last_change DESC'.format(query)
+        
         results = self.cursor.execute(query).fetchall()
         hosts = []
         for record in results:
             hostname = record[0]
-            if record[3] == -1: status = '❌'
+            if record[3] in [-1,'']: status = '❌'
             else: status = '✓'
-            availability = record[11] * 100 / (record[11] + record[12])
+            try: availability = record[11] * 100 / (record[11] + record[12])
+            except ZeroDivisionError: availability = 0
             check = humanTime(record[5])
             if status == '❌':
                 last = humanTime(record[6])
@@ -226,6 +243,7 @@ class SQLite:
                 last_nb = record[9]
             hosts.append('{:30s} {:4s}\t{}\t{}\t{}\t{:.6f}%'.format(hostname,status,check,last_nb,last,availability))  
         return hosts
+
 
     def recordUpdate(self, values):
         

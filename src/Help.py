@@ -8,6 +8,8 @@ def helpAndExit(this):
     if this   == 'execute':   print('Usage: {} --execute <command>'.format(name), file=sys.stderr)
     elif this == 'selection': print('Usage: {} --selection <query>'.format(name), file=sys.stderr)
     elif this == 'add':       print('Usage: {} --add <object type> <object 1> [<object 2> …]\nValid object types are: url, host'.format(name), file=sys.stderr)
-    elif this == 'add-url':   print("""Usage:\n {} --add url <URL> [<URL> …]
+    elif this == 'add-all':   print("""Usage:\n {} --add url <URL> [<URL> …]
  {} --add host <hostname|address> [<hostname|address> …]""".format(name,name), file=sys.stderr)
+    elif this == 'add-url':   print("""Usage:\n {} --add url <URL> [<URL> …]""".format(name,name), file=sys.stderr)
+    elif this == 'add-host':  print("""Usage:\n {} --add host <hostname|address> [<hostname|address> …]""".format(name,name), file=sys.stderr)
     exit(99)
