@@ -63,22 +63,18 @@ if cmdline.option('u') in ['host','hosts']:
 
 # Host selection
 if cmdline.option('s') is True: helpAndExit('selection')
-hosts1 = hosts2 = []
+hosts1 = []
+hosts2 = []
 for host in osmdb.selectHosts(cmdline.option('s')):
     hosts1 += (host[1],)
-print('1: '+str(hosts1))
 # Host selection by tags
 if cmdline.option('t') is True: helpAndExit('selection-by-tag')
 for host in osmdb.selectHostsByTags(cmdline.option('t')):
     hosts2 += (host[0],)
-print('2: '+str(hosts2))
 # Keep only uniq hosts
 hosts = hosts1 + hosts2
-print(hosts)
 h_set = set(hosts)
 hosts = list(h_set)
-
-print(hosts)
 
 # Instanciate a SSH client if option --execute or --deploy is used.
 if 'd' in cmdline.options or 'e' in cmdline.options:

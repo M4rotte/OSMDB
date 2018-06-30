@@ -12,6 +12,10 @@ def humanTime(timestamp):
     except Exception as e:
         return datetime.datetime.fromtimestamp(0).strftime('%Y-%m-%d %H:%M:%S')
 
+def intersection(words, d):
+    """Return a set of the values of dict `d` which are present at every key of the `words` list."""
+    return set.intersection(*(set(d.get(word, set())) for word in words))
+
 class SQLite:
     def __init__(self, configuration, logger = Logger.Logger()):
         
@@ -296,28 +300,23 @@ class SQLite:
             self.logger.log('Misformed host selection query ({}). No host selected.'.format(e))
             return []
 
+    def hostByName(self,fqdn):
+        query = """SELECT * FROM host WHERE fqdn = ?"""
+        return self.cursor.execute(query, (fqdn,)).fetchone()
+
     def hostsByTags(self, query):
 
-        final_query = 'WHERE '
-        ored_queries = []
+        candidates = []
         try:
             for ored in query.split('|'):
-                # ~ print('OR: '+ored)
-                subquery = []
-                for anded in ored.split('&'):
-                    # ~ print('AND: '+ored)
-                    query = 'SELECT fqdn FROM host_view WHERE '
-                    for a in [anded]:
-                        subquery.append('tag = "{}"'.format(a))
-                    # ~ print('ANDedQueries: '+str(subquery))
-                    query = ' AND '.join(subquery)
-                ored_queries.append(query)
-            # ~ print('ORedQueries: '+str(ored_queries))
-            final_query = ' OR '.join(ored_queries)
-            print('### '+final_query+' ###')
-        except AttributeError: pass
-        return []
-        
+                subcandidates = {}
+                for tag in ored.split('&'):
+                    query = """SELECT host FROM host_tag WHERE tag = ?"""
+                    subcandidates[tag] = self.cursor.execute(query,(tag,)).fetchall()
+                for hostname in intersection(subcandidates.keys(),subcandidates):
+                    candidates.append(hostname)
+        except AttributeError: return []
+        return candidates
 
     def addExecutions(self, executions):
         """Add executions in database."""

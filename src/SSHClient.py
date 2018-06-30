@@ -172,6 +172,7 @@ class SSHClient:
             nb_hosts = len(chunk)
             self.logger.log('Chunk #{:<3} {}'.format(chunk_k,', '.join(map(str,chunk))),0)
             for host in chunk:
+                host.user = self.configuration['ssh_default_user']
                 proc = Process(target=self._execute, args=(host, cmdline, q))
                 proc.start()
                 processes.append(proc)
