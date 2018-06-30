@@ -94,6 +94,13 @@ class SQLite:
         
         self.connection.commit()
 
+        host_view = """CREATE VIEW IF NOT EXISTS host_view AS SELECT fqdn, tag FROM
+                                host INNER JOIN host_tag ON host.fqdn = host_tag.host"""
+
+        self.cursor.execute(host_view)
+
+        self.connection.commit()
+
     def hostAlive(self, hostname):
         query = """SELECT ping_delay FROM host WHERE hostname = ?"""
         try:
@@ -291,12 +298,23 @@ class SQLite:
 
     def hostsByTags(self, query):
 
-        try:
-            return self.cursor.execute('SELECT fqdn FROM host INNER JOIN host_tag ON host.fqdn = host_tag.host WHERE '+query).fetchall()
-        except sqlite3.OperationalError as e:
-            print(str(e))
-            return []
-
+        final_query = 'WHERE '
+        ored_queries = []
+        for ored in query.split('|'):
+            # ~ print('OR: '+ored)
+            subquery = []
+            for anded in ored.split('&'):
+                # ~ print('AND: '+ored)
+                query = 'SELECT fqdn FROM host_view WHERE '
+                for a in [anded]:
+                    subquery.append('tag = "{}"'.format(a))
+                # ~ print('ANDedQueries: '+str(subquery))
+                query = ' AND '.join(subquery)
+            ored_queries.append(query)
+        # ~ print('ORedQueries: '+str(ored_queries))
+        final_query = ' OR '.join(ored_queries)
+        print('### '+final_query+' ###')
+        return []
         
 
     def addExecutions(self, executions):
