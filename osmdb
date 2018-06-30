@@ -5,6 +5,7 @@ try:
     from SQLite import SQLite as DB
     import Logger, Cmdline, Configuration, OSMDB, SSHClient
     from Help import helpAndExit as helpAndExit
+    from pprint import pprint
 except ImportError as e:
     print(str(e), file=sys.stderr)
     print('Cannot find the module(s) listed above. Exiting.', file=sys.stderr)
@@ -18,7 +19,9 @@ short_options = {'--update'    : '-u',
                  '--selection' : '-s',
                  '--purge'     : '-P',
                  '--add'       : '-A',
-                 '--delete'    : '-D'}
+                 '--delete'    : '-D',
+                 '--tags'      : '-t',
+                 '--set-tag'   : '-T'}
                  
 cmdline = Cmdline.Cmdline(sys.argv, short_options)
 configuration = Configuration.Configuration()
@@ -31,7 +34,7 @@ osmdb = OSMDB.OSMDB(configuration.configuration, db, logger)
 # Use default route if none is specified.
 if cmdline.option('n') in [False,True]: cmdline.options['n'] = OSMDB.getDefaultRoute()
 # Select all hosts if no selection query is provided.
-if cmdline.option('s') in [False]: cmdline.options['s'] = '*'
+# ~ if cmdline.option('s') in [False]: cmdline.options['s'] = '*'
 
 # Object addition
 if cmdline.option('A') is True: helpAndExit('add-all')
@@ -60,7 +63,22 @@ if cmdline.option('u') in ['host','hosts']:
 
 # Host selection
 if cmdline.option('s') is True: helpAndExit('selection')
-hosts = osmdb.selectHosts(cmdline.option('s'))
+hosts1 = hosts2 = []
+for host in osmdb.selectHosts(cmdline.option('s')):
+    hosts1 += (host[1],)
+print('1: '+str(hosts1))
+# Host selection by tags
+if cmdline.option('t') is True: helpAndExit('selection-by-tag')
+for host in osmdb.selectHostsByTags(cmdline.option('t')):
+    hosts2 += (host[0],)
+print('2: '+str(hosts2))
+# Keep only uniq hosts
+hosts = hosts1 + hosts2
+print(hosts)
+h_set = set(hosts)
+hosts = list(h_set)
+
+print(hosts)
 
 # Instanciate a SSH client if option --execute or --deploy is used.
 if 'd' in cmdline.options or 'e' in cmdline.options:

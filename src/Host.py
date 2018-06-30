@@ -78,7 +78,7 @@ class Host:
         self.address = str(address)
         try:
             self.hostname = socket.gethostbyaddr(self.address)[0]
-            self.fqdn = socket.getfqdn(self.hostname)
+            self.fqdn = socket.getfqdn(self.hostname).lower()
         except socket.herror:
             self.hostname = self.address
             self.fqdn = self.address

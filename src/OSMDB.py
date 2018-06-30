@@ -89,6 +89,8 @@ class OSMDB:
         if len(hosts) > 0: self.ssh.deploy(key, list(map(Host.Host,hosts)))
     def selectHosts(self, query = '', status = 'UP'):
         return self.db.hosts(query=query, status=status)
+    def selectHostsByTags(self, tags = ''):
+        return self.db.hostsByTags(tags)
     def listExecutions(self):
         for execution in self.db.listExecutions():
             execution_l = list(execution)
@@ -100,7 +102,7 @@ class OSMDB:
         lprint(map(Host.Host,self.db.purgeHosts(addresses)))
     
     def addHost(self, hostname):
-        fqdn = socket.getfqdn(hostname)
+        fqdn = socket.getfqdn(hostname).lower()
         try: ip = socket.gethostbyname(hostname)
         except socket.gaierror as e:
             # ~ print('“{}”: {}'.format(hostname,e))

@@ -83,7 +83,7 @@ class SQLite:
 
         self.cursor.execute(url_table)
 
-        host_tag_table = """CREATE TABLE IF NOT EXISTS tag (host TEXT,
+        host_tag_table = """CREATE TABLE IF NOT EXISTS host_tag (host TEXT,
                                        tag TEXT,
                                        description TEXT,
                                        tag_time INTEGER,
@@ -124,7 +124,7 @@ class SQLite:
                 self.connection.commit()
                 return True
             else:
-                print(self.listHosts('hostname = "{}"'.format(hostname), seen_up=False)[0])
+                print(self.listHosts('hostname LIKE "{}"'.format(hostname), seen_up=False)[0])
                 return False
         except sqlite3.OperationalError as err:
             self.logger.log('Cant’t insert into host table! ({})'.format(err),12)
@@ -271,11 +271,13 @@ class SQLite:
 
     def hosts(self, query = '', status = 'UP'):
 
-        if not query or query == '*':
+        if query == '*':
             if status is 'UP': query = """SELECT * FROM host WHERE ping_delay <> -1"""
             elif status is 'DOWN': query = """SELECT * FROM host WHERE ping_delay = -1"""
             elif status is 'ALL': query = """SELECT * FROM host"""
             else: query = """SELECT * FROM host WHERE first_up NOT NULL"""
+        elif query is '':
+            return []
         else:
             if status is 'UP': query = 'SELECT * FROM host WHERE first_up NOT NULL AND {}'.format(query)
             elif status is 'DOWN': query = 'SELECT * FROM host WHERE first_up IS NULL AND {}'.format(query)
@@ -286,6 +288,16 @@ class SQLite:
         except (sqlite3.OperationalError,sqlite3.Warning) as e:
             self.logger.log('Misformed host selection query ({}). No host selected.'.format(e))
             return []
+
+    def hostsByTags(self, query):
+
+        try:
+            return self.cursor.execute('SELECT fqdn FROM host INNER JOIN host_tag ON host.fqdn = host_tag.host WHERE '+query).fetchall()
+        except sqlite3.OperationalError as e:
+            print(str(e))
+            return []
+
+        
 
     def addExecutions(self, executions):
         """Add executions in database."""
