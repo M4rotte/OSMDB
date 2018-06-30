@@ -33,8 +33,6 @@ osmdb = OSMDB.OSMDB(configuration.configuration, db, logger)
 
 # Use default route if none is specified.
 if cmdline.option('n') in [False,True]: cmdline.options['n'] = OSMDB.getDefaultRoute()
-# Select all hosts if no selection query is provided.
-# ~ if cmdline.option('s') in [False]: cmdline.options['s'] = '*'
 
 # Object addition
 if cmdline.option('A') is True: helpAndExit('add-all')
@@ -71,12 +69,12 @@ for host in osmdb.selectHosts(cmdline.option('s')):
 if cmdline.option('t') is True: helpAndExit('selection-by-tag')
 for host in osmdb.selectHostsByTags(cmdline.option('t')):
     hosts2 += (host[0],)
-# Keep only uniq hosts
+# Keep uniq hosts
 hosts = hosts1 + hosts2
 h_set = set(hosts)
 hosts = list(h_set)
 
-# If -t (and -n) are the only options on command line then, print the selection and exit.
+# If -t (and -n) are the only options on command line then print the selection and exit.
 if len(cmdline.options.keys()) == 2 and cmdline.option('t') and cmdline.option('n'):
     osmdb.listHostsByNames(hosts)
 
@@ -145,19 +143,7 @@ if cmdline.option('D') in ['host','hosts']:
     osmdb.deleteHosts(fqdn_list)
 
     exit(0)
-# ~ ## Delete updates
-# ~ elif cmdline.option('l') in ['update','updates']:
-    # ~ osmdb.listHostUpdates()
-    # ~ exit(0)
-# ~ ## Delete executions
-# ~ elif cmdline.option('l') in ['exec','execution','executions']:
-    # ~ osmdb.listExecutions()
-    # ~ exit(0)
-# ~ ## Delete URLs
-# ~ elif cmdline.option('l') in ['url','urls']:
-    # ~ for url in osmdb.listURL():
-        # ~ print(url)
-    # ~ exit(0)
+
 ## Help on delete
 if cmdline.option('D'):
     print('Unknown object type: `{}`'.format(cmdline.option('D')), file=sys.stderr)

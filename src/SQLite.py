@@ -15,24 +15,6 @@ def intersection(words, d):
     """Return a set of the values of dict `d` which are present at every key of the `words` list."""
     return set.intersection(*(set(d.get(word, set())) for word in words))
 
-def format_host_records(records):
-    """Return host records as a list of strings. The string shows FQDN, status, check time, etc…"""
-    hosts = []
-    for record in records:
-        hostname = record[0]
-        if record[3] in [-1,'']: status = '❌'
-        else: status = '✓'
-        try: availability = record[11] * 100 / (record[11] + record[12])
-        except ZeroDivisionError: availability = 0
-        check = humanTime(record[5])
-        if status == '❌':
-            last = humanTime(record[6])
-            last_nb = record[10]
-        else:
-            last = humanTime(record[7])
-            last_nb = record[9]
-        hosts.append('{:30s} {:4s}\t{}\t{}\t{}\t{:.6f}%'.format(hostname,status,check,last_nb,last,availability))  
-    return hosts
 
 class SQLite:
     def __init__(self, configuration, logger = Logger.Logger()):
@@ -122,6 +104,25 @@ class SQLite:
         self.cursor.execute(host_view)
 
         self.connection.commit()
+
+    def format_host_records(self, records):
+        """Return host records as a list of strings. The string shows FQDN, status, check time, etc…"""
+        hosts = []
+        for record in records:
+            hostname = record[0]
+            if record[3] in [-1,'']: status = self.configuration['icons']['host_down']
+            else: status = self.configuration['icons']['host_up']
+            try: availability = record[11] * 100 / (record[11] + record[12])
+            except ZeroDivisionError: availability = 0
+            check = humanTime(record[5])
+            if status == self.configuration['icons']['host_down']:
+                last = humanTime(record[6])
+                last_nb = record[10]
+            else:
+                last = humanTime(record[7])
+                last_nb = record[9]
+            hosts.append('{:30s} {:4s}\t{}\t{}\t{}\t{:.6f}%'.format(hostname,status,check,last_nb,last,availability))  
+        return hosts
 
     def hostAlive(self, hostname):
         query = """SELECT ping_delay FROM host WHERE hostname = ?"""
@@ -261,7 +262,7 @@ class SQLite:
 
         try: results = self.cursor.execute(query).fetchall()
         except (sqlite3.OperationalError,sqlite3.Warning): results = []
-        return format_host_records(results)
+        return self.format_host_records(results)
 
 
     def recordUpdate(self, values):
@@ -328,7 +329,7 @@ class SQLite:
         for name in names:
             try: results += self.cursor.execute(query,(name,)).fetchall()
             except (sqlite3.OperationalError,sqlite3.Warning): results += []
-        return format_host_records(results)
+        return self.format_host_records(results)
 
     def addExecutions(self, executions):
         """Add executions in database."""
