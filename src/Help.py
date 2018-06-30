@@ -12,4 +12,5 @@ def helpAndExit(this):
  {} --add host <hostname|address> [<hostname|address> …]""".format(name,name), file=sys.stderr)
     elif this == 'add-url':   print("""Usage:\n {} --add url <URL> [<URL> …]""".format(name,name), file=sys.stderr)
     elif this == 'add-host':  print("""Usage:\n {} --add host <hostname|address> [<hostname|address> …]""".format(name,name), file=sys.stderr)
+    elif this == 'list':      print('Usage: {} --list <object type>\nValid object types are: url, host, update, execution'.format(name), file=sys.stderr)
     exit(99)

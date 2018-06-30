@@ -5,3 +5,5 @@ SSHClient:
 
  
 Host selection: Use the same tag system than in the Paw project ?
+
+Arguments handling: use the argparse module ? The current arguments handling is quite basic, it can’t handle option repetition for instance.

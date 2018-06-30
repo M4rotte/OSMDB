@@ -69,19 +69,24 @@ if cmdline.option('P'):
     else: osmdb.purgeHosts(cmdline.option('P'))
     
 
+if cmdline.option('l') is True: helpAndExit('list')
 if cmdline.option('l') in ['host','hosts']:
     hosts = db.listHosts(cmdline.option('s'))
     osmdb.listHosts(hosts)
-
+    exit(0)
 elif cmdline.option('l') in ['update','updates']:
     osmdb.listHostUpdates()
-    
-elif cmdline.option('l') in ['exec','executions']:
+    exit(0)
+elif cmdline.option('l') in ['exec','execution','executions']:
     osmdb.listExecutions()
-
-elif cmdline.option('l') in ['url']:
-   for url in osmdb.listURL():
-       print(url)
+    exit(0)
+elif cmdline.option('l') in ['url','urls']:
+    for url in osmdb.listURL():
+        print(url)
+    exit(0)
+if cmdline.option('l'):
+    print('Unknown object type: `{}`'.format(cmdline.option('l')), file=sys.stderr)
+    helpAndExit('list')
 
 
 # ~ osmdb.deploy(osmdb.ssh.pubkey(), 'root@ivanka')
