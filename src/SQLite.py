@@ -300,20 +300,22 @@ class SQLite:
 
         final_query = 'WHERE '
         ored_queries = []
-        for ored in query.split('|'):
-            # ~ print('OR: '+ored)
-            subquery = []
-            for anded in ored.split('&'):
-                # ~ print('AND: '+ored)
-                query = 'SELECT fqdn FROM host_view WHERE '
-                for a in [anded]:
-                    subquery.append('tag = "{}"'.format(a))
-                # ~ print('ANDedQueries: '+str(subquery))
-                query = ' AND '.join(subquery)
-            ored_queries.append(query)
-        # ~ print('ORedQueries: '+str(ored_queries))
-        final_query = ' OR '.join(ored_queries)
-        print('### '+final_query+' ###')
+        try:
+            for ored in query.split('|'):
+                # ~ print('OR: '+ored)
+                subquery = []
+                for anded in ored.split('&'):
+                    # ~ print('AND: '+ored)
+                    query = 'SELECT fqdn FROM host_view WHERE '
+                    for a in [anded]:
+                        subquery.append('tag = "{}"'.format(a))
+                    # ~ print('ANDedQueries: '+str(subquery))
+                    query = ' AND '.join(subquery)
+                ored_queries.append(query)
+            # ~ print('ORedQueries: '+str(ored_queries))
+            final_query = ' OR '.join(ored_queries)
+            print('### '+final_query+' ###')
+        except AttributeError: pass
         return []
         
 
