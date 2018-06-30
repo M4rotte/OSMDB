@@ -225,8 +225,8 @@ class SQLite:
         else:
             if not query or query is '*': query = ''
             query = 'SELECT * FROM host WHERE {} ORDER BY last_change DESC'.format(query)
-        
-        results = self.cursor.execute(query).fetchall()
+        try: results = self.cursor.execute(query).fetchall()
+        except (sqlite3.OperationalError,sqlite3.Warning): results = []
         hosts = []
         for record in results:
             hostname = record[0]
@@ -276,7 +276,7 @@ class SQLite:
             query = 'SELECT * FROM host WHERE first_up NOT NULL AND {}'.format(query)
         try:
             return self.cursor.execute(query).fetchall()
-        except sqlite3.OperationalError as e:
+        except (sqlite3.OperationalError,sqlite3.Warning) as e:
             self.logger.log('Misformed host selection query ({}). No host selected.'.format(e))
             return []
 

@@ -28,66 +28,86 @@ db = DB(configuration.configuration,logger)
 logger.setLogfile(configuration.configuration['log_file'])
 osmdb = OSMDB.OSMDB(configuration.configuration, db, logger)
 
+# Use default route if none is specified.
 if cmdline.option('n') in [False,True]: cmdline.options['n'] = OSMDB.getDefaultRoute()
+# Select all hosts if no selection query is provided.
 if cmdline.option('s') in [False]: cmdline.options['s'] = '*'
 
+# Object addition
 if cmdline.option('A') is True: helpAndExit('add-all')
+## URL addition
 if cmdline.option('A') == 'url':
     if not cmdline.hasTag(): helpAndExit('add-url')
     for url in cmdline.tags:
         osmdb.addURL(url)
     exit(0)
+## Host addition
 elif cmdline.option('A') == 'host':
     if not cmdline.hasTag(): helpAndExit('add-host')
     for host in cmdline.tags:
         osmdb.addHost(host)
     exit(0)
+## Help on addition
 if cmdline.option('A'):
     print('Unknown object type: `{}`'.format(cmdline.option('A')), file=sys.stderr)
     helpAndExit('add')
 
+# Update objects
+## Host update
 if cmdline.option('u') in ['host','hosts']:
     ping_delays = osmdb.pingHosts(cmdline.option('n'))
     osmdb.updateHosts(ping_delays,cmdline.option('n'))
 
+# Host selection
 if cmdline.option('s') is True: helpAndExit('selection')
 hosts = osmdb.selectHosts(cmdline.option('s'))
 
+# Instanciate a SSH client if option --execute or --deploy is used.
 if 'd' in cmdline.options or 'e' in cmdline.options:
     ssh_client = SSHClient.SSHClient(logger=logger, configuration=configuration.configuration)
     osmdb.ssh = ssh_client
 
+# Deploy 
 if cmdline.option('d'):
     if cmdline.option('d') is True: osmdb.deploy(ssh_client.rsakey, osmdb.selectHosts())
     else: osmdb.deploy(ssh_client.rsakey, osmdb.selectHosts(cmdline.option('d')))
 
+# Execute
 if cmdline.option('e'):
     if cmdline.option('e') is True: helpAndExit('execute')
     osmdb.execOnHosts(cmdline.option('e'), hosts)
 
+# Purge host(s) which have two or more addresses for a given FQDN. It only keeps the most recent address.
 if cmdline.option('P'):
     if cmdline.option('P') is True: osmdb.purgeHosts()
     else: osmdb.purgeHosts(cmdline.option('P'))
     
-
+# List objects
 if cmdline.option('l') is True: helpAndExit('list')
+## List hosts
 if cmdline.option('l') in ['host','hosts']:
     hosts = db.listHosts(cmdline.option('s'))
     osmdb.listHosts(hosts)
     exit(0)
+## List updates
 elif cmdline.option('l') in ['update','updates']:
     osmdb.listHostUpdates()
     exit(0)
+## List executions
 elif cmdline.option('l') in ['exec','execution','executions']:
     osmdb.listExecutions()
     exit(0)
+## List URLs
 elif cmdline.option('l') in ['url','urls']:
     for url in osmdb.listURL():
         print(url)
     exit(0)
+## Help on list
 if cmdline.option('l'):
     print('Unknown object type: `{}`'.format(cmdline.option('l')), file=sys.stderr)
     helpAndExit('list')
+
+
 
 
 # ~ osmdb.deploy(osmdb.ssh.pubkey(), 'root@ivanka')
