@@ -277,7 +277,7 @@ class SQLite:
         try:
             return self.cursor.execute(query).fetchall()
         except sqlite3.OperationalError as e:
-            self.logger.log('SQLite operational error! ({})'.format(e))
+            self.logger.log('Misformed host selection query ({}). No host selected.'.format(e))
             return []
 
     def addExecutions(self, executions):

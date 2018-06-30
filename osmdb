@@ -17,7 +17,8 @@ short_options = {'--update'    : '-u',
                  '--deploy'    : '-d',
                  '--selection' : '-s',
                  '--purge'     : '-P',
-                 '--add'       : '-A'}
+                 '--add'       : '-A',
+                 '--delete'    : '-D'}
                  
 cmdline = Cmdline.Cmdline(sys.argv, short_options)
 configuration = Configuration.Configuration()

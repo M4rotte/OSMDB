@@ -5,7 +5,7 @@ from os import path
 def helpAndExit(this):
 
     name = path.basename(sys.argv[0])
-    if this   == 'execute':   print('Usage: {} --execute <command>'.format(name), file=sys.stderr)
+    if this   == 'execute':   print('Usage: {} --execute <command> [--selection <query>]'.format(name), file=sys.stderr)
     elif this == 'selection': print('Usage: {} --selection <query>'.format(name), file=sys.stderr)
     elif this == 'add':       print('Usage: {} --add <object type> <object 1> [<object 2> …]\nValid object types are: url, host'.format(name), file=sys.stderr)
     elif this == 'add-all':   print("""Usage:\n {} --add url <URL> [<URL> …]

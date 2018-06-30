@@ -86,7 +86,7 @@ class OSMDB:
         lprint(self.db.listHostUpdates())
     def deploy(self, key, hosts):
         """Add the public key of OSMDB in the authorized_keys file of the given hosts."""
-        self.ssh.deploy(key, list(map(Host.Host,hosts)))
+        if len(hosts) > 0: self.ssh.deploy(key, list(map(Host.Host,hosts)))
     def selectHosts(self, query = ''):
         return self.db.hosts(query=query)
     def listExecutions(self):
