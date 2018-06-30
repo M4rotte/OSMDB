@@ -318,6 +318,28 @@ class SQLite:
         except AttributeError: return []
         return candidates
 
+    def listHostsByName(self, names):
+        hosts = []
+        query = """SELECT * FROM host WHERE fqdn = ?"""
+        for name in names:
+            try: results = self.cursor.execute(query,(name,)).fetchall()
+            except (sqlite3.OperationalError,sqlite3.Warning): results = []
+            for record in results:
+                hostname = record[0]
+                if record[3] in [-1,'']: status = '❌'
+                else: status = '✓'
+                try: availability = record[11] * 100 / (record[11] + record[12])
+                except ZeroDivisionError: availability = 0
+                check = humanTime(record[5])
+                if status == '❌':
+                    last = humanTime(record[6])
+                    last_nb = record[10]
+                else:
+                    last = humanTime(record[7])
+                    last_nb = record[9]
+                hosts.append('{:30s} {:4s}\t{}\t{}\t{}\t{:.6f}%'.format(hostname,status,check,last_nb,last,availability))  
+        return hosts
+
     def addExecutions(self, executions):
         """Add executions in database."""
         query = """INSERT INTO execution (user,fqdn,cmdline,return_code,stdout,stderr,status,start,end) VALUES 

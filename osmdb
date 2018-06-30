@@ -76,6 +76,10 @@ hosts = hosts1 + hosts2
 h_set = set(hosts)
 hosts = list(h_set)
 
+# If -t (and -n) are the only options on command line then, print the selection and exit.
+if len(cmdline.options.keys()) == 2 and cmdline.option('t') and cmdline.option('n'):
+    osmdb.listHostsByNames(hosts)
+
 # Instanciate a SSH client if option --execute or --deploy is used.
 if 'd' in cmdline.options or 'e' in cmdline.options:
     ssh_client = SSHClient.SSHClient(logger=logger, configuration=configuration.configuration)

@@ -92,4 +92,7 @@ class Host:
 
     def ping(self): return ping(self.address)
 
+    def asString(self):
+        return('{} {}'.format(self.fqdn,self.ping))
+
 if __name__ == '__main__': sys.exit(100)

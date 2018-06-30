@@ -86,6 +86,8 @@ class OSMDB:
         self.db.addExecutions(executions)
     def listHosts(self, hosts):
         lprint(hosts)
+    def listHostsByNames(self, hostnames):
+        lprint(self.db.listHostsByName(hostnames))
     def listHostUpdates(self):
         lprint(self.db.listHostUpdates())
     def deploy(self, key, hosts):
