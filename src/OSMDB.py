@@ -87,8 +87,8 @@ class OSMDB:
     def deploy(self, key, hosts):
         """Add the public key of OSMDB in the authorized_keys file of the given hosts."""
         if len(hosts) > 0: self.ssh.deploy(key, list(map(Host.Host,hosts)))
-    def selectHosts(self, query = ''):
-        return self.db.hosts(query=query)
+    def selectHosts(self, query = '', status = 'UP'):
+        return self.db.hosts(query=query, status=status)
     def listExecutions(self):
         for execution in self.db.listExecutions():
             execution_l = list(execution)
@@ -106,7 +106,13 @@ class OSMDB:
             # ~ print('“{}”: {}'.format(hostname,e))
             ip = ''
         self.db.addHost(hostname, fqdn, ip=ip)
-   
+
+    def deleteHosts(self, fqdn_list):
+
+        self.db.deleteExecutions(fqdn_list)
+        self.db.deleteHosts(fqdn_list)
+        self.db.commit()
+
     def addURL(self,url):
 
         proto,user,password,server,port,path = URL.splitURL(url)

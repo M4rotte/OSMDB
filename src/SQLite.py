@@ -117,6 +117,7 @@ class SQLite:
         last_id = self.cursor.execute(pre_query).fetchone()[0]
         query = """INSERT OR IGNORE INTO host (hostname, fqdn, ping_delay, user, ip) VALUES (?,?,?,?,?)"""
         try:
+            
             self.cursor.execute(query, (hostname, fqdn, delay, user, ip))
             if self.cursor.lastrowid > last_id:
                 self.logger.log('Host “{}” inserted into database.'.format(hostname),0)
@@ -128,6 +129,8 @@ class SQLite:
         except sqlite3.OperationalError as err:
             self.logger.log('Cant’t insert into host table! ({})'.format(err),12)
             return False
+        except IndexError:
+            pass
         except Exception as e:
             print(' **!!** '+str(e), file=sys.stderr)
             return False
@@ -219,12 +222,14 @@ class SQLite:
     def listHosts(self, query, seen_up = True):
         
         if seen_up is True:
-            if not query or query is '*': query = ''
+            if not query or query == '*': query = ''
             else: query = 'AND '+query
             query = 'SELECT * FROM host WHERE first_up NOT NULL {} ORDER BY last_change DESC'.format(query)
         else:
-            if not query or query is '*': query = ''
-            query = 'SELECT * FROM host WHERE {} ORDER BY last_change DESC'.format(query)
+            if not query or query == '*': query = ''
+            else: query = 'AND '+query
+            query = 'SELECT * FROM host WHERE fqdn NOT NULL {} ORDER BY last_change DESC '.format(query)
+
         try: results = self.cursor.execute(query).fetchall()
         except (sqlite3.OperationalError,sqlite3.Warning): results = []
         hosts = []
@@ -264,16 +269,18 @@ class SQLite:
             updates.append('{} {:18} {}/{} {}/{}/{} {}'.format(update_time,source,record[3],record[4],record[5],record[6],record[7],record[8]))
         return updates
 
-    def hosts(self, status = 'UP', query = ''):
-        
-        if not query:
+    def hosts(self, query = '', status = 'UP'):
+
+        if not query or query == '*':
             if status is 'UP': query = """SELECT * FROM host WHERE ping_delay <> -1"""
             elif status is 'DOWN': query = """SELECT * FROM host WHERE ping_delay = -1"""
+            elif status is 'ALL': query = """SELECT * FROM host"""
             else: query = """SELECT * FROM host WHERE first_up NOT NULL"""
-        elif query == '*':
-            query = 'SELECT * FROM host WHERE first_up NOT NULL'
         else:
-            query = 'SELECT * FROM host WHERE first_up NOT NULL AND {}'.format(query)
+            if status is 'UP': query = 'SELECT * FROM host WHERE first_up NOT NULL AND {}'.format(query)
+            elif status is 'DOWN': query = 'SELECT * FROM host WHERE first_up IS NULL AND {}'.format(query)
+            elif status is 'ALL': query = 'SELECT * FROM host WHERE {}'.format(query)
+            else: query = 'SELECT * FROM host WHERE first_up NOT NULL WHERE {}'.format(query)
         try:
             return self.cursor.execute(query).fetchall()
         except (sqlite3.OperationalError,sqlite3.Warning) as e:
@@ -320,6 +327,33 @@ class SQLite:
                     deleted.append(host)
         self.connection.commit()
         return deleted
+
+    def commit(self):
+        try:
+            self.connection.commit()
+            self.logger.log('Committing to database.',0)
+            return True
+        except Exception as e:
+            print(str(e), file=sys.stderr)
+            return False
+
+    def deleteExecutions(self, fqdn_list):
+        if len(fqdn_list) == 0: return False
+        ored = []
+        for fqdn in fqdn_list:
+            ored.append('fqdn = "{}"'.format(fqdn))
+        query = 'DELETE FROM execution WHERE '+' OR '.join(ored)
+        self.cursor.execute(query)
+
+    def deleteHosts(self, fqdn_list):
+        if len(fqdn_list) == 0: return False
+        ored = []
+        self.deleteExecutions(fqdn_list)
+        for fqdn in fqdn_list:
+            ored.append('fqdn = "{}"'.format(fqdn))
+        query = 'DELETE FROM host WHERE '+' OR '.join(ored)
+        self.logger.log('Deleting hosts: '+', '.join(fqdn_list),1)
+        self.cursor.execute(query)
 
     def addURL(self, url):
         try:

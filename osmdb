@@ -69,8 +69,8 @@ if 'd' in cmdline.options or 'e' in cmdline.options:
 
 # Deploy 
 if cmdline.option('d'):
-    if cmdline.option('d') is True: osmdb.deploy(ssh_client.rsakey, osmdb.selectHosts())
-    else: osmdb.deploy(ssh_client.rsakey, osmdb.selectHosts(cmdline.option('d')))
+    if cmdline.option('d') is True: osmdb.deploy(ssh_client.rsakey, osmdb.selectHosts(status='UP'))
+    else: osmdb.deploy(ssh_client.rsakey, osmdb.selectHosts(cmdline.option('d'), status='ALL'))
 
 # Execute
 if cmdline.option('e'):
@@ -86,7 +86,9 @@ if cmdline.option('P'):
 if cmdline.option('l') is True: helpAndExit('list')
 ## List hosts
 if cmdline.option('l') in ['host','hosts']:
-    hosts = db.listHosts(cmdline.option('s'))
+    if cmdline.lastTag() in ['ALL','all']:
+        hosts = db.listHosts(cmdline.option('s'), seen_up=False)
+    else: hosts = db.listHosts(cmdline.option('s'), seen_up=True)
     osmdb.listHosts(hosts)
     exit(0)
 ## List updates
@@ -108,6 +110,39 @@ if cmdline.option('l'):
     helpAndExit('list')
 
 
+# Delete objects
+if cmdline.option('D') is True: helpAndExit('delete')
+## Print help message if no selection is made and no hostname is specified as tags.
+if cmdline.option('D') and cmdline.option('s') == '*' and len(cmdline.tags) == 0: helpAndExit('delete-all')
+## Delete hosts
+if cmdline.option('D') in ['host','hosts']:
+    fqdn_list = []
+    if cmdline.option('s') != '*':
+        hosts = db.hosts(query=cmdline.option('s'))
+    else: hosts = []
+    for host in hosts: fqdn_list.append(host[1])
+    for fqdn in cmdline.tags: fqdn_list.append(fqdn)
+    fqdn_set = set(fqdn_list)
+    fqdn_list = list(fqdn_set)
+    osmdb.deleteHosts(fqdn_list)
+
+    exit(0)
+# ~ ## Delete updates
+# ~ elif cmdline.option('l') in ['update','updates']:
+    # ~ osmdb.listHostUpdates()
+    # ~ exit(0)
+# ~ ## Delete executions
+# ~ elif cmdline.option('l') in ['exec','execution','executions']:
+    # ~ osmdb.listExecutions()
+    # ~ exit(0)
+# ~ ## Delete URLs
+# ~ elif cmdline.option('l') in ['url','urls']:
+    # ~ for url in osmdb.listURL():
+        # ~ print(url)
+    # ~ exit(0)
+## Help on delete
+if cmdline.option('D'):
+    print('Unknown object type: `{}`'.format(cmdline.option('D')), file=sys.stderr)
+    helpAndExit('delete')
 
 
-# ~ osmdb.deploy(osmdb.ssh.pubkey(), 'root@ivanka')
