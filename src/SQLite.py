@@ -249,15 +249,13 @@ class SQLite:
             return False
         return True
 
-    def listHosts(self, query, seen_up = True):
-        
+    def listHosts(self, query = '', seen_up = True):
+
+        if not query or query == '*': query = ''
+        else: query = 'AND '+query
         if seen_up is True:
-            if not query or query == '*': query = ''
-            else: query = 'AND '+query
             query = 'SELECT * FROM host WHERE first_up NOT NULL {} ORDER BY last_change DESC'.format(query)
         else:
-            if not query or query == '*': query = ''
-            else: query = 'AND '+query
             query = 'SELECT * FROM host WHERE fqdn NOT NULL {} ORDER BY last_change DESC '.format(query)
 
         try: results = self.cursor.execute(query).fetchall()
@@ -286,6 +284,7 @@ class SQLite:
 
     def hosts(self, query = '', status = 'UP'):
 
+        if not query: query = ''
         if query == '*':
             if status is 'UP': query = """SELECT * FROM host WHERE ping_delay <> -1"""
             elif status is 'DOWN': query = """SELECT * FROM host WHERE ping_delay = -1"""
