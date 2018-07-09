@@ -80,7 +80,6 @@ class OSMDB:
         for host in hosts:
             _hosts.append(self.db.hostByName(host))
         hosts = list(map(Host.Host, _hosts))
-        print(hosts)
         executions = list(map(Execution.Execution, self.ssh.execute(command, hosts)))
         lprint(executions)
         self.db.addExecutions(executions)
@@ -111,7 +110,6 @@ class OSMDB:
         fqdn = socket.getfqdn(hostname).lower()
         try: ip = socket.gethostbyname(hostname)
         except socket.gaierror as e:
-            # ~ print('“{}”: {}'.format(hostname,e))
             ip = ''
         self.db.addHost(hostname, fqdn, ip=ip)
 
