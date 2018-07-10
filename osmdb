@@ -69,14 +69,15 @@ for host in osmdb.selectHosts(cmdline.option('s')):
 if cmdline.option('t') is True: helpAndExit('selection-by-tag')
 for host in osmdb.selectHostsByTags(cmdline.option('t')):
     hosts2 += (host[0],)
+    
 # Keep uniq hosts
 hosts = hosts1 + hosts2
 h_set = set(hosts)
 hosts = list(h_set)
 
-# If -t (and -n) are the only options on command line then print the selection and exit.
-if len(cmdline.options.keys()) == 2 and cmdline.option('t') and cmdline.option('n'):
-    osmdb.listHostsByNames(hosts)
+# If -t (and or -s) are the only options on command line then print the selection and exit.
+if len(cmdline.options.keys()) == 2 and ( cmdline.option('t') or cmdline.option('s') ):
+    osmdb.listHostsByNames(h_set)
 
 # Instanciate a SSH client if option --execute or --deploy is used.
 if 'd' in cmdline.options or 'e' in cmdline.options:
