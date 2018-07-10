@@ -22,7 +22,10 @@ class SQLite:
         try:
             self.logger = logger
             self.configuration = configuration
-            self.configuration['ssh_default_user'] = self.configuration.get('ssh_default_user','root')
+            default_ssh_configuration = {
+                'default_user': 'root'
+                }
+            self.configuration['ssh'] = self.configuration.get('ssh', default_ssh_configuration)
             self.connection = sqlite3.connect(self.configuration['db_file'])
             self.cursor = self.connection.cursor()
             self.initialize_db()
@@ -142,7 +145,7 @@ class SQLite:
 
     def addHost(self, hostname, fqdn, delay = -1, user = '', ip = ''):
         """Add a host in database if it doesn’t already exist."""
-        if user == '': user = self.configuration['ssh_default_user']
+        if user == '': user = self.configuration['ssh']['default_user']
         pre_query = """SELECT MAX(rowid) FROM host"""
         last_id = self.cursor.execute(pre_query).fetchone()[0]
         query = """INSERT OR IGNORE INTO host (hostname, fqdn, ping_delay, user, ip) VALUES (?,?,?,?,?)"""
@@ -169,7 +172,7 @@ class SQLite:
         query = """SELECT user FROM host WHERE fqdn = ?"""
         res = self.cursor.execute(query, (fqdn,)).fetchone()
         if res: return res[0]
-        else: return self.configuration['ssh_default_user']
+        else: return self.configuration['ssh']['default_user']
             
     def updateHosts(self, ping_delays, network_name = None):
         

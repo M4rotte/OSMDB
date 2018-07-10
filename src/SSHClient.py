@@ -40,19 +40,21 @@ class SSHClient:
         """The SSH client is initialized from default key. A new key is generated if none exists."""
 
         self.configuration = configuration
-        self.configuration['ssh_client_timeout'] = self.configuration.get('ssh_client_timeout', 30)
-        self.configuration['ssh_exec_timeout'] = self.configuration.get('ssh_exec_timeout', 140)
-        self.configuration['ssh_auth_timeout'] = self.configuration.get('ssh_auth_timeout', 10)
-        self.configuration['ssh_banner_timeout'] = self.configuration.get('ssh_banner_timeout', 40)
+        default_ssh_configuration = {
+            'client_timeout': 30,
+            'auth_timeout': 30,
+            'banner_timeout': 30,
+            'exec_timeout': 60,
+            'default_key': './osmdb_id',
+            'default_pubkey': './osmdb_id.pub'
+        }
+        self.configuration['ssh'] = self.configuration.get('ssh', default_ssh_configuration)
         self.configuration['exec_timeout'] = self.configuration.get('exec_timeout', 60)
-        self.configuration['ssh_default_key'] = self.configuration.get('ssh_default_key', './osmdb_id')
-        self.configuration['ssh_default_pubkey'] = self.configuration.get('ssh_default_pubkey', './osmdb_id.pub')
         self.logger = logger
-        self.rsakey = self.savedKey(self.configuration['ssh_default_key'])
+        self.rsakey = self.savedKey(self.configuration['ssh']['default_key'])
         try: self.key = self.rsakey.key
         except AttributeError: self.key = None
         if not self.key: self.newkey()
-
         message = 'Using key "{}"'.format(self.keyhash())
         logger.log(message, 1)
         self.client = paramiko.SSHClient()
@@ -71,7 +73,7 @@ class SSHClient:
         """Generate a RSA key."""
         self.logger.log('Generating new key…', 1)
         self.key = rsa.generate_private_key(backend=crypto_default_backend(),public_exponent=65537,key_size=2048)
-        self.saveKey(self.configuration['ssh_default_key'],self.configuration['ssh_default_pubkey'])
+        self.saveKey(self.configuration['ssh']['default_key'],self.configuration['ssh']['default_pubkey'])
 
     def pubkey(self):
         """Return the public key."""
@@ -120,9 +122,9 @@ class SSHClient:
         try:
             exec_status = ''
             return_code = 0
-            self.client.connect(host.hostname, username=host.user, pkey=self.sshkey(), timeout=float(self.configuration['ssh_client_timeout']),
-                                banner_timeout=float(self.configuration['ssh_banner_timeout']), auth_timeout=float(self.configuration['ssh_auth_timeout']))
-            std    = self.client.exec_command(cmdline, timeout=float(self.configuration['ssh_exec_timeout']))
+            self.client.connect(host.hostname, username=host.user, pkey=self.sshkey(), timeout=float(self.configuration['ssh']['client_timeout']),
+                                banner_timeout=float(self.configuration['ssh']['banner_timeout']), auth_timeout=float(self.configuration['ssh']['auth_timeout']))
+            std    = self.client.exec_command(cmdline, timeout=float(self.configuration['ssh']['exec_timeout']))
             signal.alarm(int(self.configuration['exec_timeout']))
             signal.signal(signal.SIGALRM, self.handleSignal)
             self.logger.log('{}@{}> {}'.format(host.user,host.hostname,cmdline), 0)
@@ -156,7 +158,7 @@ class SSHClient:
 
     def hostUser(self,hostname):
         """Return the user to use for a given host. TODO: check in database for overriding."""
-        return self.configuration['ssh_default_user']
+        return self.configuration['ssh']['default_user']
 
     def execute(self, cmdline, hosts):
         """Execute a command on hosts in parallel."""
@@ -164,7 +166,7 @@ class SSHClient:
         runs = []
         processes = []
         if cmdline is '': return []
-        try: chunk_size = int(self.configuration['ssh_chunk_size'])
+        try: chunk_size = int(self.configuration['ssh']['chunk_size'])
         except KeyError: chunk_size = 4
         self.logger.log('Executing `{}` on {} hosts in chunks of {} hosts.'.format(cmdline,len(hosts),chunk_size),0)
         chunk_k = 1
@@ -172,7 +174,7 @@ class SSHClient:
             nb_hosts = len(chunk)
             self.logger.log('Chunk #{:<3} {}'.format(chunk_k,', '.join(map(str,chunk))),0)
             for host in chunk:
-                host.user = self.configuration['ssh_default_user']
+                host.user = self.configuration['ssh']['default_user']
                 proc = Process(target=self._execute, args=(host, cmdline, q))
                 proc.start()
                 processes.append(proc)
@@ -224,14 +226,14 @@ class SSHClient:
         return_code = 0
         try:
 
-            self.client.connect(host.hostname, username=user, password=password, timeout=float(self.configuration['ssh_client_timeout']),
-                                                                        banner_timeout=float(self.configuration['ssh_banner_timeout']),
-                                                                        auth_timeout=float(self.configuration['ssh_auth_timeout']))
+            self.client.connect(host.hostname, username=user, password=password, timeout=float(self.configuration['ssh']['client_timeout']),
+                                                                        banner_timeout=float(self.configuration['ssh']['banner_timeout']),
+                                                                        auth_timeout=float(self.configuration['ssh']['auth_timeout']))
 
-            self.client.exec_command('mkdir .ssh', timeout=float(self.configuration['ssh_exec_timeout']))
-            self.client.exec_command('chmod 0700 .ssh', timeout=float(self.configuration['ssh_exec_timeout']))
+            self.client.exec_command('mkdir .ssh', timeout=float(self.configuration['ssh']['exec_timeout']))
+            self.client.exec_command('chmod 0700 .ssh', timeout=float(self.configuration['ssh']['exec_timeout']))
             self.client.exec_command('echo "ssh-rsa '+pubkey+' ## OSMDB KEY ## '+strftime("%Y-%m-%d %H:%M:%S")+'" >> .ssh/authorized_keys', \
-                                              timeout=float(self.configuration['ssh_exec_timeout']))
+                                              timeout=float(self.configuration['ssh']['exec_timeout']))
             std = self.client.exec_command('chmod 0600 .ssh/authorized_keys', timeout=float(self.configuration['exec_timeout']))
             signal.alarm(int(self.configuration['exec_timeout']))
             signal.signal(signal.SIGALRM, self.handleSignal)
@@ -269,7 +271,7 @@ class SSHClient:
         q = Queue()
         runs = []
         processes = []
-        try: chunk_size = int(self.configuration['ssh_chunk_size'])
+        try: chunk_size = int(self.configuration['ssh']['chunk_size'])
         except KeyError: chunk_size = 4
         self.logger.log('Deploying key {} on {} hosts in chunks of {} hosts.'.format(b2a_base64(key.get_fingerprint()).decode('utf-8').strip(),len(hosts),chunk_size),0)
         chunk_k = 1
