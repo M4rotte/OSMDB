@@ -74,7 +74,15 @@ class OSMDB:
         
         return hosts
 
+    def getURLs(self, network = '127.0.0.0/8'):
+        pass
+        
+    
+
     def updateHosts(self, ping_delays, network_name = None): self.db.updateHosts(ping_delays, network_name)
+
+    def updateURLSs(self, responses): self.db.updateURLs(reponses)
+
     def execOnHosts(self,command='', hosts = []):
         _hosts = []
         for host in hosts:
