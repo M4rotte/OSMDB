@@ -115,6 +115,7 @@ class OSMDB:
                 self.logger.log('GET: {} [{}]'.format(item,item['status']), 0)
                 
                 _urls.append(item)
+
         return _urls
         
     
@@ -124,6 +125,7 @@ class OSMDB:
         try:
             urls = self.getURLs()
             self.db.updateURLs(urls)
+
         except TypeError:
             return False
 

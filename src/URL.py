@@ -4,7 +4,7 @@ from __future__ import print_function
 import sys
 import time
 import string
-from multiprocessing import Queue
+
 
 def splitURL(url):
     split = list(filter(None, url.split('/')))
@@ -59,7 +59,9 @@ class URL(dict):
             self['certificate'] = url[10]
             self['expire'] = url[11]
             self['get_error'] = url[12]
+
         except IndexError: pass # Let crash later…
+
 
     def __repr__(self):
 
