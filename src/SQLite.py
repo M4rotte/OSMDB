@@ -75,7 +75,8 @@ class SQLite:
         
         self.cursor.execute(execution_table)
 
-        url_table = """CREATE TABLE IF NOT EXISTS url (host TEXT,
+        url_table = """CREATE TABLE IF NOT EXISTS url (
+                                       host TEXT,
                                        proto TEXT,
                                        path TEXT,
                                        port INT,
@@ -83,6 +84,7 @@ class SQLite:
                                        password TEXT,
                                        check_time INTEGER,
                                        status TEXT,
+                                       headers TEXT,
                                        content TEXT,
                                        certificate TEXT,
                                        expire INT,
@@ -90,7 +92,8 @@ class SQLite:
 
         self.cursor.execute(url_table)
 
-        host_tag_table = """CREATE TABLE IF NOT EXISTS host_tag (host TEXT,
+        host_tag_table = """CREATE TABLE IF NOT EXISTS host_tag (
+                                       host TEXT,
                                        tag TEXT,
                                        description TEXT,
                                        tag_time INTEGER,
@@ -414,3 +417,11 @@ class SQLite:
     def urls(self):
         query = """SELECT * FROM url"""
         return self.cursor.execute(query).fetchall()
+
+    def updateURLs(self, urls):
+        query = """UPDATE url SET host=:host,proto=:proto,path=:path,port=:port,
+                                  user=:user,password=:password,check_time=:check_time,status=:status,
+                                  headers=:headers,content=:content,certificate=:certificate,expire=:expire"""
+
+        self.cursor.executemany(query, map(dict,urls))
+        self.connection.commit()

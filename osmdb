@@ -60,10 +60,10 @@ if cmdline.option('u') in ['host','hosts']:
     ping_delays = osmdb.pingHosts(cmdline.option('n'))
     osmdb.updateHosts(ping_delays,cmdline.option('n'))
 
-## URLs update [WIP]
+## Update URLs [WIP]
 if cmdline.option('u') in ['url','urls']:
-    responses = osmdb.getURLs(cmdline.option('n'))
-    osmdb.updateURLs(responses,cmdline.option('n'))
+    urls = osmdb.getURLs()
+    osmdb.updateURLs(urls)
 
 # Host selection
 if cmdline.option('s') is True: helpAndExit('selection')
