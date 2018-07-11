@@ -88,7 +88,7 @@ class SQLite:
                                        content TEXT,
                                        certificate TEXT,
                                        expire INT,
-                                       PRIMARY KEY(proto,host,path,user,port))"""
+                                       PRIMARY KEY(proto,host,path,port,user))"""
 
         self.cursor.execute(url_table)
 
@@ -421,7 +421,8 @@ class SQLite:
     def updateURLs(self, urls):
         query = """UPDATE url SET host=:host,proto=:proto,path=:path,port=:port,
                                   user=:user,password=:password,check_time=:check_time,status=:status,
-                                  headers=:headers,content=:content,certificate=:certificate,expire=:expire"""
+                                  headers=:headers,content=:content,certificate=:certificate,expire=:expire
+                              WHERE host = :host AND proto = :proto AND path = :path AND port = :port AND user = :user"""
 
         self.cursor.executemany(query, map(dict,urls))
         self.connection.commit()

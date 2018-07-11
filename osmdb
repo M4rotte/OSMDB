@@ -62,8 +62,7 @@ if cmdline.option('u') in ['host','hosts']:
 
 ## Update URLs [WIP]
 if cmdline.option('u') in ['url','urls']:
-    urls = osmdb.getURLs()
-    osmdb.updateURLs(urls)
+    osmdb.updateURLs()
 
 # Host selection
 if cmdline.option('s') is True: helpAndExit('selection')

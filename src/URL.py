@@ -4,7 +4,7 @@ from __future__ import print_function
 import sys
 import time
 import string
-import requests
+from multiprocessing import Queue
 
 def splitURL(url):
     split = list(filter(None, url.split('/')))
@@ -43,7 +43,7 @@ def splitURL(url):
 class URL(dict):
 
     def __init__(self, url = None):
-        
+
         try:
             super().__init__()
             self['host'] = url[0]
@@ -70,18 +70,5 @@ class URL(dict):
         if self['port']: output += ':'+str(self['port'])
         output += self['path']
         return output
-
-    def get(self):
-        # TODO : 
-        #  - make the use of user/password directly in URL optional
-        #  - make the SSL validity verification optional
-        try:
-            res = requests.get(repr(self), auth=(self['user'],self['password']), verify=False)
-            self['content'] = res.text
-        except Exception as e:
-            print(str(e),file=sys.stderr)
-            self['content'] = ''
-            self['get_error'] = str(e)
-        finally: return self
 
 if __name__ == '__main__': sys.exit(100)

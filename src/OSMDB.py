@@ -9,6 +9,7 @@ import socket
 from multiprocessing import Process, Queue
 from datetime import timedelta
 from time import time
+import requests
 import Host, SSHClient, Execution, URL
 
 
@@ -24,6 +25,24 @@ def lprint(l):
     if type(l) is not list: l = list(l)
     for i in l: print(i)
 
+def GetURL(url, q = Queue(), verify = False):
+    """`url` is an URL.URL object. An URL.URL object is also both put in queue q and returned."""
+    # TODO : 
+    #  - make the use of user/password directly in URL optional
+    #  - make the SSL validity verification optional
+    try:
+        res = requests.get(repr(url), auth=(url['user'],url['password']), verify=verify)
+        url['content'] = res.text
+        url['status']  = res.status_code
+    except Exception as e:
+        print(str(e),file=sys.stderr)
+        url['content'] = ''
+        url['status']  = -1
+        url['get_error'] = str(e)
+    finally:
+        q.put(url)
+        return url
+
 class OSMDB:
     """The Overly Simple Management Database main object."""
     def __init__(self, configuration, db, logger = Logger.Logger()):
@@ -32,6 +51,11 @@ class OSMDB:
         self.configuration = configuration
         self.logger = logger
         self.configuration['ping_chunk_size'] = self.configuration.get('ping_chunk_size', 32)
+        default_url_configuration = {
+            'chunk_size': 2,
+            'verify_ssl': False
+        }
+        self.configuration['url'] = self.configuration.get('url', default_url_configuration)
         
     def __repr__(self): return 'OSMDB'
         
@@ -78,16 +102,28 @@ class OSMDB:
         
         _urls = []
         urls = list(map(URL.URL, self.db.urls()))
-        for url in urls:
-            _urls.append(url.get())
+        self.logger.log('GET request on {} URLs in chunks of {}'.format(len(urls),self.configuration['url']['chunk_size']), 0)
+        if self.configuration['url']['verify_ssl'] == 'True': verify = True
+        else: verify = False
+        for url_chunk in chunks(urls, self.configuration['url']['chunk_size']):
+            queue = Queue(self.configuration['url']['chunk_size'])
+            for url in url_chunk:
+                self.logger.log('GET: {} …'.format(url), 0)
+                Process(target=GetURL,args=((url,queue,verify))).start()
+            for _ in range(0, len(url_chunk)):
+                item = queue.get()
+                self.logger.log('GET: {} [{}]'.format(item,item['status']), 0)
+                
+                _urls.append(item)
         return _urls
         
     
     def updateHosts(self, ping_delays, network_name = None): self.db.updateHosts(ping_delays, network_name)
 
-    def updateURLs(self, urls):
+    def updateURLs(self):
         try:
-            return self.db.updateURLs(urls)
+            urls = self.getURLs()
+            self.db.updateURLs(urls)
         except TypeError:
             return False
 
