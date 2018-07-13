@@ -53,7 +53,7 @@ class OSMDB:
         self.configuration['ping_chunk_size'] = self.configuration.get('ping_chunk_size', 32)
         default_url_configuration = {
             'chunk_size': 2,
-            'verify_ssl': False
+            'verify_ssl': 'False'
         }
         self.configuration['url'] = self.configuration.get('url', default_url_configuration)
         

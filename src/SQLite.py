@@ -153,7 +153,6 @@ class SQLite:
         last_id = self.cursor.execute(pre_query).fetchone()[0]
         query = """INSERT OR IGNORE INTO host (hostname, fqdn, ping_delay, user, ip) VALUES (?,?,?,?,?)"""
         try:
-            
             self.cursor.execute(query, (hostname, fqdn, delay, user, ip))
             if self.cursor.lastrowid > last_id:
                 self.logger.log('Host “{}” inserted into database.'.format(hostname),0)
