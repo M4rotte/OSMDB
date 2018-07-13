@@ -6,3 +6,5 @@ SSHClient:
 Tag system: tag negation (with !)
 
 Arguments handling: use the argparse module ? The current arguments handling is quite basic, it can’t handle option repetition for instance (but it’s not needed for now).
+
+Catch error when chunk size is too high so the program raises "max open files" on updating → give up without a crash.

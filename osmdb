@@ -94,6 +94,12 @@ if selname != '' and len(hosts) == 0:
 if cmdline.option('u') in ['selection','sel'] and len(hosts) > 0:
     ping_delays = osmdb.pingAddresses(hosts)
     osmdb.updateHosts(ping_delays,selname)
+## If no selection is made nor object type is specified, but update is asked, then update all hosts which has been seen at least once. 
+if cmdline.option('u') is True and not (cmdline.option('t') or cmdline.option('s')):
+    hosts = []
+    for host in osmdb.selectHosts('ip LIKE "%"'): hosts += (host[1],)
+    ping_delays = osmdb.pingAddresses(hosts)
+    osmdb.updateHosts(ping_delays,'ip LIKE "%"')
 
 # If -t (and or -s) are the only options on command line then print the selection and exit.
 if len(cmdline.options.keys()) == 2 and ( cmdline.option('t') or cmdline.option('s') ):
