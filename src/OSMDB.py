@@ -44,14 +44,15 @@ def GetURL(url, q = Queue(), verify = False):
         print(str(e), file=sys.stderr)
         try:
             print('SSL Error! Alternate methode to get a certificate for {}'.format(url['host']))
-            context_nocheck = ssl.SSLContext(ssl.PROTOCOL_TLS)
-            context_nocheck.verify_mode = ssl.CERT_REQUIRED
-            context_nocheck.check_hostname = True
-            context_nocheck.load_verify_locations("/etc/ssl/certs/ca-certificates.crt")
-            conn = context_nocheck.wrap_socket(socket.socket(socket.AF_INET), server_hostname=url['host'])
-            conn.settimeout(10.0)
-            conn.connect((url['host'],int(url['port'])))
-            ssl_cert = str(conn.getpeercert())
+            # ~ context_nocheck = ssl.SSLContext(ssl.PROTOCOL_TLS)
+            # ~ context_nocheck = ssl.create_default_context()
+            # ~ context_nocheck.verify_mode = ssl.CERT_NONE
+            # ~ context_nocheck.check_hostname = False
+            # ~ context_nocheck.load_verify_locations("/etc/ssl/certs/ca-certificates.crt")
+            # ~ conn = context_nocheck.wrap_socket(socket.socket(socket.AF_INET), server_hostname=url['host'])
+            # ~ conn.settimeout(10.0)
+            # ~ conn.connect((url['host'],int(url['port'])))
+            ssl_cert = ssl.get_server_certificate((url['host'], url['port']))
             url['certificate'] = str(ssl_cert)
         except OSError as e:
             print(str(e))
