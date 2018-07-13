@@ -88,6 +88,7 @@ class SQLite:
                                        content TEXT,
                                        certificate TEXT,
                                        expire INT,
+                                       get_error TEXT,
                                        PRIMARY KEY(proto,host,path,port,user))"""
 
         self.cursor.execute(url_table)
@@ -164,7 +165,7 @@ class SQLite:
         except sqlite3.OperationalError as err:
             self.logger.log('Cant’t insert into host table! ({})'.format(err),12)
             return False
-        except IndexError:
+        except (IndexError, TypeError):
             pass
         except Exception as e:
             print(' **!!** '+str(e), file=sys.stderr)
@@ -406,7 +407,6 @@ class SQLite:
 
     def addURL(self, url):
         try:
-            self.addHost(url[3], url[3], -1, '', '')
             query = """INSERT INTO URL (proto,user,password,host,port,path) VALUES (?,?,?,?,?,?)"""
             self.cursor.execute(query, url)
             self.connection.commit()
@@ -419,10 +419,11 @@ class SQLite:
         return self.cursor.execute(query).fetchall()
 
     def updateURLs(self, urls):
+
         query = """UPDATE url SET host=:host,proto=:proto,path=:path,port=:port,
                                   user=:user,password=:password,check_time=:check_time,status=:status,
-                                  headers=:headers,content=:content,certificate=:certificate,expire=:expire
-                              WHERE host = :host AND proto = :proto AND path = :path AND port = :port AND user = :user"""
+                                  headers=:headers,content=:content,certificate=:certificate,expire=:expire,get_error=:get_error
+                              WHERE host = :host AND proto = :proto AND path = :path AND port = :port"""
 
         self.cursor.executemany(query, map(dict,urls))
         self.connection.commit()
