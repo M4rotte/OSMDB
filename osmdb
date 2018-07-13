@@ -79,6 +79,22 @@ hosts = hosts1 + hosts2
 h_set = set(hosts)
 hosts = list(h_set)
 
+## Selection name
+selname = ''
+if cmdline.option('s'): selname += cmdline.option('s')
+if cmdline.option('t'): selname += ' '+cmdline.option('t')
+
+## If a selection has been made (SQL or tag query) but no host is returned: warn about it and exit.
+if selname != '' and len(hosts) == 0:
+    print('Selection is empty. Nothing to do.', file=sys.stderr)
+    exit(80)
+    
+
+## Update the host selection (if any)
+if cmdline.option('u') in ['selection','sel'] and len(hosts) > 0:
+    ping_delays = osmdb.pingAddresses(hosts)
+    osmdb.updateHosts(ping_delays,selname)
+
 # If -t (and or -s) are the only options on command line then print the selection and exit.
 if len(cmdline.options.keys()) == 2 and ( cmdline.option('t') or cmdline.option('s') ):
     osmdb.listHostsByNames(h_set)
@@ -146,7 +162,6 @@ if cmdline.option('D') in ['host','hosts']:
     fqdn_set = set(fqdn_list)
     fqdn_list = list(fqdn_set)
     osmdb.deleteHosts(fqdn_list)
-
     exit(0)
 
 ## Help on delete

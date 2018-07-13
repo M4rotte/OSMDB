@@ -58,26 +58,17 @@ class OSMDB:
         self.configuration['url'] = self.configuration.get('url', default_url_configuration)
         
     def __repr__(self): return 'OSMDB'
+    
+    def pingAddr(self, addresses):
         
-    def pingHosts(self, network = '127.0.0.0/8'):
-        """Ping all hosts in a given network and update the database. It returns the list
-           of hosts, each host being a triplet (hostname, fqdn, ping_delay).
-           If network is False the `ip route` external command will be called
-           to get the default route and use it."""
         hosts = []
-        if not network: network = getDefaultRoute()
-        try: net = ipaddress.IPv4Network(network)
-        except ValueError as e:
-            print('Invalid network specification: '+str(e), file=sys.stderr)
-            return hosts
-        addresses = list(net.hosts())
         remaining = len(addresses)
         queue = Queue(remaining)
         self.logger.log('Processing {} addresses in batches of {}.'.format(remaining, str(self.configuration['ping_chunk_size'])), 0)
         batch_index = 1
         start = time()
         try:
-            for chunk in chunks(list(net.hosts()), self.configuration['ping_chunk_size']):
+            for chunk in chunks(addresses, self.configuration['ping_chunk_size']):
                 remaining -= len(chunk)
                 first = chunk[0]
                 last = chunk[-1:][0]
@@ -97,6 +88,25 @@ class OSMDB:
             self.logger.log('Host update cancelled by keyboard interrupt!', 5)
         
         return hosts
+    
+    def pingHosts(self, network = '127.0.0.0/8'):
+        """Ping all hosts in a given network and update the database. It returns the list
+           of hosts, each host being a triplet (hostname, fqdn, ping_delay).
+           If network is False the `ip route` external command will be called
+           to get the default route and use it."""
+        
+        if not network: network = getDefaultRoute()
+        try: net = ipaddress.IPv4Network(network)
+        except ValueError as e:
+            print('Invalid network specification: '+str(e), file=sys.stderr)
+            return hosts
+        addresses = list(net.hosts())
+        return self.pingAddr(addresses)
+
+    def pingAddresses(self, addresses = []):
+        """Ping all addresses and update the database. It returns the list
+           of hosts, each host being a triplet (hostname, fqdn, ping_delay)."""
+        return self.pingAddr(addresses)
 
     def getURLs(self):
         
@@ -113,7 +123,6 @@ class OSMDB:
             for _ in range(0, len(url_chunk)):
                 item = queue.get()
                 self.logger.log('GET: {} [{}]'.format(item,item['status']), 0)
-                
                 _urls.append(item)
 
         return _urls

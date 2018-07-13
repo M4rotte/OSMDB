@@ -160,7 +160,7 @@ class SQLite:
                 self.connection.commit()
                 return True
             else:
-                print(self.listHosts('hostname LIKE "{}"'.format(hostname), seen_up=False)[0])
+                # ~ print(self.listHosts('hostname LIKE "{}"'.format(hostname), seen_up=False)[0])
                 return False
         except sqlite3.OperationalError as err:
             self.logger.log('Cant’t insert into host table! ({})'.format(err),12)
@@ -179,13 +179,14 @@ class SQLite:
             
     def updateHosts(self, ping_delays, network_name = None):
         
+        
         nb_up = nb_down = nb_new = nb_lost = nb_back = 0
+        start = time()
         for hostname,fqdn,delay,ip in ping_delays:
             alive = self.hostAlive(hostname)
             seen_once = self.hostSeenOnce(hostname)
             user = self.hostUser(fqdn)
             self.addHost(hostname, fqdn, delay, user, ip)
-            start = time()
             now = int(start)
             try:
                 query = """UPDATE host SET last_check = ? WHERE hostname = ?"""
