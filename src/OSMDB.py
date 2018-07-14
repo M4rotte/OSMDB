@@ -110,7 +110,7 @@ class OSMDB:
         try: net = ipaddress.IPv4Network(network)
         except ValueError as e:
             print('Invalid network specification: '+str(e), file=sys.stderr)
-            return hosts
+            return []
         addresses = list(net.hosts())
         return self.pingAddr(addresses)
 
