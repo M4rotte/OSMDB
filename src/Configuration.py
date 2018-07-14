@@ -30,5 +30,8 @@ class Configuration():
         if  limit < self.configuration['ssh']['chunk_size']:
             print('{} is too big as chunk size for SSH execution. Setting to {}.'.format(self.configuration['ssh']['chunk_size'],limit))
             self.configuration['ssh']['chunk_size'] = limit     
+        if  limit < self.configuration['snmp']['chunk_size']:
+            print('{} is too big as chunk size for SNMP check. Setting to {}.'.format(self.configuration['snmp']['chunk_size'],limit))
+            self.configuration['snmp']['chunk_size'] = limit  
 
 if __name__ == '__main__': sys.exit(100)

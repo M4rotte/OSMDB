@@ -4,6 +4,8 @@
 import sys
 try:
 
+    from time import time
+    from multiprocessing import Queue
     from pysnmp.hlapi import *
 
 except ImportError as e:
@@ -11,8 +13,8 @@ except ImportError as e:
     print('Cannot find the module(s) listed above. Exiting.', file=sys.stderr)
     sys.exit(1)
 
-def getSNMP(host = 'localhost', mib = 'SNMPv2-MIB', oid = 'sysDescr', community = 'public', port = 161):
-    ret = []
+def getSNMP(host, queue = Queue(), mib = 'SNMPv2-MIB', oid = 'sysDescr', community = 'public', port = '161'):
+
     errorIndication, errorStatus, errorIndex, varBinds = next(
         getCmd(SnmpEngine(),
                CommunityData(community, mpModel=0),
@@ -28,6 +30,11 @@ def getSNMP(host = 'localhost', mib = 'SNMPv2-MIB', oid = 'sysDescr', community 
                             errorIndex and varBinds[int(errorIndex) - 1][0] or '?'))
 
     
-    try: return varBinds[0].prettyPrint().split('=')[1].strip()
-    except IndexError: return ''
+    try:
+        ret = varBinds[0].prettyPrint().split('=')[1].strip()
+        queue.put((host,mib,oid,int(time()),ret))
+        return varBinds[0].prettyPrint().split('=')[1].strip()
+    except IndexError:
+        queue.put((host,mib,oid,int(time()),''))
+        return ''
 

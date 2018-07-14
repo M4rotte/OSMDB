@@ -82,18 +82,24 @@ hosts = list(h_set)
 ## Selection name
 selname = ''
 if cmdline.option('s'): selname += cmdline.option('s')
-if cmdline.option('t'): selname += ' '+cmdline.option('t')
+if cmdline.option('t'): selname += '|'+cmdline.option('t')
 
 ## If a selection has been made (SQL or tag query) but no host is returned: warn about it and exit.
 if selname != '' and len(hosts) == 0:
     print('Selection is empty. Nothing to do.', file=sys.stderr)
     exit(80)
-    
 
 ## Update the host selection (if any)
 if cmdline.option('u') in ['selection','sel'] and len(hosts) > 0:
     ping_delays = osmdb.pingAddresses(hosts)
     osmdb.updateHosts(ping_delays,selname)
+
+## Update SNMP on host selection (if any)
+if cmdline.option('u') in ['snmp'] and len(hosts) > 0:
+    snmp_responses = osmdb.getSNMP(hosts)
+    print(snmp_responses)
+    osmdb.updateSNMP(snmp_responses,selname)
+    
 ## If no selection is made nor object type is specified, but update is asked, then update all hosts which has been seen at least once. 
 if cmdline.option('u') is True and not (cmdline.option('t') or cmdline.option('s')):
     hosts = []

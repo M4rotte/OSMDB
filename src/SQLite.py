@@ -102,9 +102,19 @@ class SQLite:
                                        PRIMARY KEY(host, tag))"""
 
         self.cursor.execute(host_tag_table)
-        
-        self.connection.commit()
 
+        snmp_table = """CREATE TABLE IF NOT EXISTS snmp (
+                                       host TEXT,
+                                       mib TEXT,
+                                       oid TEXT,
+                                       value TEXT,
+                                       check_time INTEGER,
+                                       selection TEXT,
+                                       FOREIGN KEY(host) REFERENCES host(fqdn),
+                                       PRIMARY KEY(host, mib, oid))"""
+
+        self.cursor.execute(snmp_table)
+        
         host_view = """CREATE VIEW IF NOT EXISTS host_view AS SELECT fqdn, tag FROM
                                 host INNER JOIN host_tag ON host.fqdn = host_tag.host"""
 
@@ -439,3 +449,18 @@ class SQLite:
         except sqlite3.OperationalError as err:
             print('Invalid SQL query!',file=sys.stderr)
             return False
+
+    def updateSNMP(self, snmp_responses, selname):
+        snmp = {}
+        for response in snmp_responses:
+            if response[4] is '': continue
+            snmp['host'] = response[0]
+            snmp['mib'] = response[1]
+            snmp['oid'] = response[2]
+            self.cursor.execute("""INSERT OR IGNORE INTO snmp (host,mib,oid) VALUES (?,?,?)""", (snmp['host'],snmp['mib'],snmp['oid']))
+            snmp['check_time'] = response[3]
+            snmp['value'] = response[4]
+            snmp['selection'] = selname
+            query = """UPDATE snmp SET check_time=:check_time,value=:value WHERE host = :host AND mib = :mib AND oid = :oid"""
+            self.cursor.execute(query, snmp)
+        self.connection.commit()

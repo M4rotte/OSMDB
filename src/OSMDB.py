@@ -13,6 +13,7 @@ import ssl
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 import Host, SSHClient, Execution, URL
+from SNMP import getSNMP
 
 
 def getDefaultRoute(): 
@@ -203,10 +204,41 @@ class OSMDB:
             self.logger.log('Can’t add “{}”: {}'.format(url,action))
         else: self.logger.log('Added URL “{}“'.format(url))
 
-    def listURL(self):
-        return list(map(URL.URL, self.db.urls()))
+    def listURL(self): return list(map(URL.URL, self.db.urls()))
 
-    def deleteURLs(self, query):
-        return self.db.deleteURLs(query)
+    def deleteURLs(self, query): return self.db.deleteURLs(query)
+
+    def getSNMP(self, hosts):
         
+        responses = []
+        remaining = len(hosts)
+        queue = Queue(remaining)
+        self.logger.log('Querying SNMP on {} hosts in batches of {}.'.format(remaining, str(self.configuration['snmp']['chunk_size'])), 0)
+        batch_index = 1
+        start = time()
+        try:
+            for chunk in chunks(hosts, self.configuration['snmp']['chunk_size']):
+                remaining -= len(chunk)
+                first = chunk[0]
+                last = chunk[-1:][0]
+                self.logger.log('Batch #{:03d} ({}) {} → {}, ({} left)'.format(batch_index, str(len(chunk)), first, last, str(remaining)), 0)
+                for host in chunk:
+                    Process(target=getSNMP, args=(host, queue)).start()
+                for host in chunk:
+                    responses.append(queue.get())
+                batch_index += 1
+            end = time()
+            elapsed = str(timedelta(seconds=(end - start)))
+            rate = len(hosts) / (end - start)
+            self.logger.log('{} hosts checked in {} ({:.2f} a/s)'.format(len(hosts), elapsed, rate), 0)
+
+        except KeyboardInterrupt:
+            self.logger.log('Host update cancelled by keyboard interrupt!', 5)
+
+        return responses
+
+    def updateSNMP(self, snmp_responses, selname):
+        
+        return self.db.updateSNMP(snmp_responses, selname)
+
 if __name__ == '__main__': sys.exit(100)
