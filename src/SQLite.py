@@ -167,7 +167,6 @@ class SQLite:
             self.cursor.execute(query, (hostname, fqdn, delay, user, ip))
             if self.cursor.lastrowid > last_id:
                 self.logger.log('Host “{}” inserted into database.'.format(hostname),0)
-                self.connection.commit()
                 return True
             else:
                 # ~ print(self.listHosts('hostname LIKE "{}"'.format(hostname), seen_up=False)[0])
@@ -264,6 +263,7 @@ class SQLite:
         except Exception as e:
             print(' **!!** '+str(e))
             return False
+            
         return True
 
     def listHosts(self, query = '', seen_up = True):
