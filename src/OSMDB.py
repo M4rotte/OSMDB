@@ -7,9 +7,11 @@ import subprocess
 import Host, Logger
 import socket, requests
 from multiprocessing import Process, Queue
-from datetime import timedelta
+from datetime import timedelta, datetime
 from time import time
 import ssl
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 import Host, SSHClient, Execution, URL
 
 
@@ -32,35 +34,16 @@ def GetURL(url, q = Queue(), verify = False):
     #  - make the use of user/password directly in URL optional
     #  - make the SSL validity verification optional
     if not url['port']: url['port'] = '443'
-
+    url['check_time'] = int(time())
     try:
-        with socket.create_connection((url['host'], int(url['port']))) as sock:
-            context = ssl.create_default_context()
-            context.load_default_certs()
-            with context.wrap_socket(sock, server_hostname=url['host']) as ssock:
-                print('Got a certificate for {}'.format(url['host']))
-                url['certificate'] = str(ssock.getpeercert())
-    except ssl.SSLError as e:
-        print(str(e), file=sys.stderr)
-        try:
-            print('SSL Error! Alternate methode to get a certificate for {}'.format(url['host']))
-            # ~ context_nocheck = ssl.SSLContext(ssl.PROTOCOL_TLS)
-            # ~ context_nocheck = ssl.create_default_context()
-            # ~ context_nocheck.verify_mode = ssl.CERT_NONE
-            # ~ context_nocheck.check_hostname = False
-            # ~ context_nocheck.load_verify_locations("/etc/ssl/certs/ca-certificates.crt")
-            # ~ conn = context_nocheck.wrap_socket(socket.socket(socket.AF_INET), server_hostname=url['host'])
-            # ~ conn.settimeout(10.0)
-            # ~ conn.connect((url['host'],int(url['port'])))
-            ssl_cert = ssl.get_server_certificate((url['host'], url['port']))
-            url['certificate'] = str(ssl_cert)
-        except OSError as e:
-            print(str(e))
-    try:
-        pass
+        ssl_cert = ssl.get_server_certificate((url['host'], int(url['port'])))
+        url['certificate'] = ssl_cert
+        cert = x509.load_pem_x509_certificate(bytes(ssl_cert,'utf-8'), default_backend())
+        url['expire'] = cert.not_valid_after.strftime('%s')
         res = requests.get(repr(url), auth=(url['user'],url['password']), verify=verify)
         url['content'] = res.text
         url['status']  = res.status_code
+        url['get_error']  = ''
     except Exception as e:
         print(str(e),file=sys.stderr)
         url['content'] = ''
