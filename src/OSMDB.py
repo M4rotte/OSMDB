@@ -206,4 +206,7 @@ class OSMDB:
     def listURL(self):
         return list(map(URL.URL, self.db.urls()))
 
+    def deleteURLs(self, query):
+        return self.db.deleteURLs(query)
+        
 if __name__ == '__main__': sys.exit(100)

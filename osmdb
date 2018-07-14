@@ -154,7 +154,7 @@ if cmdline.option('l'):
 
 
 # Delete objects
-if cmdline.option('D') is True: helpAndExit('delete')
+if cmdline.option('D') is True: helpAndExit('delete-all')
 ## Print help message if no selection is made and no hostname is specified as tags.
 if cmdline.option('D') and cmdline.option('s') == '*' and len(cmdline.tags) == 0: helpAndExit('delete-all')
 ## Delete hosts
@@ -167,12 +167,15 @@ if cmdline.option('D') in ['host','hosts']:
     for fqdn in cmdline.tags: fqdn_list.append(fqdn)
     fqdn_set = set(fqdn_list)
     fqdn_list = list(fqdn_set)
-    osmdb.deleteHosts(fqdn_list)
+    if len(fqdn_list) > 0: osmdb.deleteHosts(fqdn_list)
+    else: helpAndExit('delete-host')
     exit(0)
 
-## Help on delete
-if cmdline.option('D'):
-    print('Unknown object type: `{}`'.format(cmdline.option('D')), file=sys.stderr)
-    helpAndExit('delete')
+## Delete URLs
+if cmdline.option('D') in ['url']:
+    if cmdline.lastTag():
+        osmdb.deleteURLs(cmdline.lastTag())
+    else: helpAndExit('delete-url')
+
 
 

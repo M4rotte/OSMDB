@@ -427,3 +427,15 @@ class SQLite:
 
         self.cursor.executemany(query, map(dict,urls))
         self.connection.commit()
+
+    def deleteURLs(self, where_clause = 'hostname not like "%"'):
+        query = 'DELETE FROM url WHERE '+where_clause
+        try:
+            if self.cursor.execute(query):
+                self.logger.log('DELETE FROM url WHERE '+where_clause,1)
+                self.connection.commit()
+                return True
+            else: return False
+        except sqlite3.OperationalError as err:
+            print('Invalid SQL query!',file=sys.stderr)
+            return False
