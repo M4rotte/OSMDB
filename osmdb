@@ -96,8 +96,8 @@ if cmdline.option('u') in ['selection','sel'] and len(hosts) > 0:
 
 ## Update SNMP on host selection (if any)
 if cmdline.option('u') in ['snmp'] and len(hosts) > 0:
-    snmp_responses = osmdb.getSNMP(hosts)
-    print(snmp_responses)
+    snmp_responses = osmdb.getSNMP(hosts, mib='SNMPv2-MIB', oid='sysDescr')
+    snmp_responses += osmdb.getSNMP(hosts, mib='SNMPv2-MIB', oid='sysUpTime')
     osmdb.updateSNMP(snmp_responses,selname)
     
 ## If no selection is made nor object type is specified, but update is asked, then update all hosts which has been seen at least once. 

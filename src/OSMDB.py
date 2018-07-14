@@ -208,12 +208,12 @@ class OSMDB:
 
     def deleteURLs(self, query): return self.db.deleteURLs(query)
 
-    def getSNMP(self, hosts):
+    def getSNMP(self, hosts, mib, oid):
         
         responses = []
         remaining = len(hosts)
         queue = Queue(remaining)
-        self.logger.log('Querying SNMP on {} hosts in batches of {}.'.format(remaining, str(self.configuration['snmp']['chunk_size'])), 0)
+        self.logger.log('Querying SNMP for {}:{} on {} hosts in batches of {}.'.format(mib, oid, remaining, self.configuration['snmp']['chunk_size']), 0)
         batch_index = 1
         start = time()
         try:
@@ -221,9 +221,9 @@ class OSMDB:
                 remaining -= len(chunk)
                 first = chunk[0]
                 last = chunk[-1:][0]
-                self.logger.log('Batch #{:03d} ({}) {} → {}, ({} left)'.format(batch_index, str(len(chunk)), first, last, str(remaining)), 0)
+                self.logger.log('Batch #{:03d} ({}) {} → {}, ({} left)'.format(batch_index, len(chunk), first, last, remaining), 0)
                 for host in chunk:
-                    Process(target=getSNMP, args=(host, queue)).start()
+                    Process(target=getSNMP, args=(host, queue, mib, oid)).start()
                 for host in chunk:
                     responses.append(queue.get())
                 batch_index += 1
