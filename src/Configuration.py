@@ -16,8 +16,11 @@ class Configuration():
             print('Can’t load configuration, will be using default values! ({})'.format(str(e)),file=sys.stderr)
             self.configuration['log_file'] = '&1'
             self.configuration['ping_chunk_size'] = 32
-            self.configuration['url']['chunk_size'] = 32
-            self.configuration['ssh']['chunk_size'] = 32
+            self.configuration['url'] = { 'chunk_size': 32, 'verify_ssl': 'False' }
+            self.configuration['ssh'] = { 'chunk_size': 32, 'default_user': 'osmdb' }
+            self.configuration['snmp'] = { 'chunk_size': 32, 'community': 'public' }
+            self.configuration['icons'] = { 'host_up': '✓', 'host_down': '❌' }
+            self.configuration['exec_timeout'] = 60
             self.configuration['db_file'] = './osmdb.db'
 
         limit = resource.getrlimit(resource.RLIMIT_NOFILE)[0]
