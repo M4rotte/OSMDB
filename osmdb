@@ -95,7 +95,7 @@ if cmdline.option('u') in ['selection','sel'] and len(hosts) > 0:
     osmdb.updateHosts(ping_delays,selname)
 
 ## Update SNMP on host selection (if any)
-if cmdline.option('u') in ['snmp'] and len(hosts) > 0:
+if cmdline.option('u') in ['snmp']:
     snmp_responses = osmdb.getSNMP(hosts, mib='SNMPv2-MIB', oid='sysDescr')
     snmp_responses += osmdb.getSNMP(hosts, mib='SNMPv2-MIB', oid='sysUpTime')
     osmdb.updateSNMP(snmp_responses,selname)
@@ -107,9 +107,9 @@ if cmdline.option('u') is True and not (cmdline.option('t') or cmdline.option('s
     ping_delays = osmdb.pingAddresses(hosts)
     osmdb.updateHosts(ping_delays,'ip LIKE "%"')
 
-# If -t (and or -s) are the only options on command line then print the selection and exit.
-if len(cmdline.options.keys()) == 2 and ( cmdline.option('t') or cmdline.option('s') ):
-    osmdb.listHostsByNames(h_set)
+# If -t (or -s) are the only options on command line then print the selection and exit.
+if len(cmdline.options.keys()) == 3 and ( cmdline.option('t') or cmdline.option('s') ):
+    osmdb.listHostsByNames(hosts)
 
 # Instanciate a SSH client if option --execute or --deploy is used.
 if 'd' in cmdline.options or 'e' in cmdline.options:
@@ -127,6 +127,7 @@ if cmdline.option('e'):
     osmdb.execOnHosts(cmdline.option('e'), hosts)
 
 # Purge host(s) which have two or more addresses for a given FQDN. It only keeps the most recent address.
+# Only addresses which have been seen at least once up are taken into account.
 if cmdline.option('P'):
     if cmdline.option('P') is True: osmdb.purgeHosts()
     else: osmdb.purgeHosts(cmdline.option('P'))
@@ -181,5 +182,17 @@ if cmdline.option('D') in ['url']:
         osmdb.deleteURLs(cmdline.lastTag())
     else: helpAndExit('delete-url')
 
+# Tag hosts
+if cmdline.option('T') is True or ( cmdline.option('T') and not cmdline.lastTag() and not cmdline.option('t') and not cmdline.option('s')): helpAndExit('tag-hosts')
+## Use the host selection query directly provided as last tag (last non option/value token on the command line)
+if cmdline.option('T') and not (cmdline.option('s') or cmdline.option('t')) :
+    for host in osmdb.selectHosts(cmdline.lastTag()):
+        osmdb.tagHost(host[1],cmdline.option('T'), cmdline.option('-description'))
+## Use the main hostname selection (union of --selection (-s) and --tags (-t) options) as soon as one of the two options is present.
+elif cmdline.option('T'):
+    for hostname in hosts:
+        osmdb.tagHost(hostname,cmdline.option('T'),cmdline.option('-description'))
 
 
+# Commit to database what has not yet been committed: tags
+osmdb.db.commit()

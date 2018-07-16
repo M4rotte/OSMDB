@@ -241,4 +241,9 @@ class OSMDB:
         
         return self.db.updateSNMP(snmp_responses, selname)
 
+    def tagHost(self, fqdn, tag, descr = ''):
+        # TODO: Do not accept anything
+        if descr is False: descr = ''
+        self.db.tagHost(fqdn,tag,descr)
+
 if __name__ == '__main__': sys.exit(100)

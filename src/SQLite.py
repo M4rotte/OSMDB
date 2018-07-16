@@ -391,7 +391,6 @@ class SQLite:
     def commit(self):
         try:
             self.connection.commit()
-            self.logger.log('Committing to database.',0)
             return True
         except Exception as e:
             print(str(e), file=sys.stderr)
@@ -464,3 +463,9 @@ class SQLite:
             query = """UPDATE snmp SET check_time=:check_time,value=:value WHERE host = :host AND mib = :mib AND oid = :oid"""
             self.cursor.execute(query, snmp)
         self.connection.commit()
+
+    def tagHost(self,host,tag,descr):
+        query = """INSERT OR IGNORE INTO host_tag (host,tag) VALUES (?,?)"""
+        self.cursor.execute(query,(host, tag))
+        query = """UPDATE host_tag SET tag = ?, tag_time = ?, description = ? WHERE host = ? AND tag = ?"""
+        self.cursor.execute(query, (tag, int(time()), descr, host, tag))

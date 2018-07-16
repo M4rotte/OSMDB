@@ -20,6 +20,8 @@ def helpAndExit(this):
     elif this == 'delete-url':         print('Usage: {} --delete url <query>'.format(name), file=sys.stderr)
     elif this == 'delete-host':        print("""Usage:\n {} --delete host <FQDN> [<FQDN> …]
  {} --delete host --selection <query>""".format(name,name), file=sys.stderr)
+    elif this == 'tag-hosts':          print("""Usage:\n {} --set-tag <tag> <query>
+ {} --set-tag <tag> --selection <query> --tags <tag query>""".format(name,name), file=sys.stderr)
     exit(99)
 
 
