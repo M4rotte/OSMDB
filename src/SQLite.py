@@ -303,16 +303,16 @@ class SQLite:
 
         if not query: query = ''
         if query == '*':
-            if status is 'UP': query = """SELECT * FROM host WHERE ping_delay <> -1"""
-            elif status is 'DOWN': query = """SELECT * FROM host WHERE ping_delay = -1"""
-            elif status is 'ALL': query = """SELECT * FROM host"""
+            if status == 'UP': query = """SELECT * FROM host WHERE ping_delay <> -1"""
+            elif status == 'DOWN': query = """SELECT * FROM host WHERE ping_delay = -1"""
+            elif status == 'ALL': query = """SELECT * FROM host"""
             else: query = """SELECT * FROM host WHERE first_up NOT NULL"""
         elif query is '':
             return []
         else:
-            if status is 'UP': query = 'SELECT * FROM host WHERE first_up NOT NULL AND {}'.format(query)
-            elif status is 'DOWN': query = 'SELECT * FROM host WHERE first_up IS NULL AND {}'.format(query)
-            elif status is 'ALL': query = 'SELECT * FROM host WHERE {}'.format(query)
+            if status == 'UP': query = 'SELECT * FROM host WHERE first_up NOT NULL AND {}'.format(query)
+            elif status == 'DOWN': query = 'SELECT * FROM host WHERE first_up IS NULL AND {}'.format(query)
+            elif status == 'ALL': query = 'SELECT * FROM host WHERE {}'.format(query)
             else: query = 'SELECT * FROM host WHERE first_up NOT NULL WHERE {}'.format(query)
         try:
             return self.cursor.execute(query).fetchall()
@@ -368,7 +368,7 @@ class SQLite:
         return self.cursor.execute(query).fetchall()
         
     def purgeHosts(self, addresses):
-        query = """SELECT * FROM host WHERE ip LIKE ?"""
+        query = """SELECT * FROM host WHERE ip LIKE ? AND first_up > 0"""
         hosts = self.cursor.execute(query, (addresses,)).fetchall()
         deleted = []
         for host in hosts:
