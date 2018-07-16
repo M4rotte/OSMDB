@@ -108,7 +108,7 @@ if cmdline.option('u') is True and not (cmdline.option('t') or cmdline.option('s
     osmdb.updateHosts(ping_delays,'ip LIKE "%"')
 
 # If -t (or -s) are the only options on command line then print the selection and exit.
-if len(cmdline.options.keys()) == 3 and ( cmdline.option('t') or cmdline.option('s') ):
+if len(cmdline.options.keys()) in [2,3] and ( cmdline.option('t') or cmdline.option('s') ):
     osmdb.listHostsByNames(hosts)
 
 # Instanciate a SSH client if option --execute or --deploy is used.
@@ -133,7 +133,6 @@ if cmdline.option('P'):
     else: osmdb.purgeHosts(cmdline.option('P'))
     
 # List objects
-if cmdline.option('l') is True: helpAndExit('list')
 ## List hosts
 if cmdline.option('l') in ['host','hosts']:
     if cmdline.lastTag() in ['ALL','all']:
@@ -155,7 +154,7 @@ elif cmdline.option('l') in ['url','urls']:
         print(url)
     exit(0)
 ## Help on list
-if cmdline.option('l'):
+elif cmdline.option('l'):
     print('Unknown object type: `{}`'.format(cmdline.option('l')), file=sys.stderr)
     helpAndExit('list')
 
