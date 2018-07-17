@@ -88,6 +88,7 @@ class SQLite:
                                        content TEXT,
                                        certificate TEXT,
                                        expire INT,
+                                       get_error TEXT,
                                        PRIMARY KEY(proto,host,path,port,user))"""
 
         self.cursor.execute(url_table)
@@ -101,9 +102,19 @@ class SQLite:
                                        PRIMARY KEY(host, tag))"""
 
         self.cursor.execute(host_tag_table)
-        
-        self.connection.commit()
 
+        snmp_table = """CREATE TABLE IF NOT EXISTS snmp (
+                                       host TEXT,
+                                       mib TEXT,
+                                       oid TEXT,
+                                       value TEXT,
+                                       check_time INTEGER,
+                                       selection TEXT,
+                                       FOREIGN KEY(host) REFERENCES host(fqdn),
+                                       PRIMARY KEY(host, mib, oid))"""
+
+        self.cursor.execute(snmp_table)
+        
         host_view = """CREATE VIEW IF NOT EXISTS host_view AS SELECT fqdn, tag FROM
                                 host INNER JOIN host_tag ON host.fqdn = host_tag.host"""
 
@@ -153,19 +164,17 @@ class SQLite:
         last_id = self.cursor.execute(pre_query).fetchone()[0]
         query = """INSERT OR IGNORE INTO host (hostname, fqdn, ping_delay, user, ip) VALUES (?,?,?,?,?)"""
         try:
-            
             self.cursor.execute(query, (hostname, fqdn, delay, user, ip))
             if self.cursor.lastrowid > last_id:
                 self.logger.log('Host “{}” inserted into database.'.format(hostname),0)
-                self.connection.commit()
                 return True
             else:
-                print(self.listHosts('hostname LIKE "{}"'.format(hostname), seen_up=False)[0])
+                # ~ print(self.listHosts('hostname LIKE "{}"'.format(hostname), seen_up=False)[0])
                 return False
         except sqlite3.OperationalError as err:
             self.logger.log('Cant’t insert into host table! ({})'.format(err),12)
             return False
-        except IndexError:
+        except (IndexError, TypeError):
             pass
         except Exception as e:
             print(' **!!** '+str(e), file=sys.stderr)
@@ -179,13 +188,14 @@ class SQLite:
             
     def updateHosts(self, ping_delays, network_name = None):
         
+        
         nb_up = nb_down = nb_new = nb_lost = nb_back = 0
+        start = time()
         for hostname,fqdn,delay,ip in ping_delays:
             alive = self.hostAlive(hostname)
             seen_once = self.hostSeenOnce(hostname)
             user = self.hostUser(fqdn)
             self.addHost(hostname, fqdn, delay, user, ip)
-            start = time()
             now = int(start)
             try:
                 query = """UPDATE host SET last_check = ? WHERE hostname = ?"""
@@ -253,6 +263,7 @@ class SQLite:
         except Exception as e:
             print(' **!!** '+str(e))
             return False
+            
         return True
 
     def listHosts(self, query = '', seen_up = True):
@@ -292,16 +303,16 @@ class SQLite:
 
         if not query: query = ''
         if query == '*':
-            if status is 'UP': query = """SELECT * FROM host WHERE ping_delay <> -1"""
-            elif status is 'DOWN': query = """SELECT * FROM host WHERE ping_delay = -1"""
-            elif status is 'ALL': query = """SELECT * FROM host"""
+            if status == 'UP': query = """SELECT * FROM host WHERE ping_delay <> -1"""
+            elif status == 'DOWN': query = """SELECT * FROM host WHERE ping_delay = -1"""
+            elif status == 'ALL': query = """SELECT * FROM host"""
             else: query = """SELECT * FROM host WHERE first_up NOT NULL"""
         elif query is '':
             return []
         else:
-            if status is 'UP': query = 'SELECT * FROM host WHERE first_up NOT NULL AND {}'.format(query)
-            elif status is 'DOWN': query = 'SELECT * FROM host WHERE first_up IS NULL AND {}'.format(query)
-            elif status is 'ALL': query = 'SELECT * FROM host WHERE {}'.format(query)
+            if status == 'UP': query = 'SELECT * FROM host WHERE first_up NOT NULL AND {}'.format(query)
+            elif status == 'DOWN': query = 'SELECT * FROM host WHERE first_up IS NULL AND {}'.format(query)
+            elif status == 'ALL': query = 'SELECT * FROM host WHERE {}'.format(query)
             else: query = 'SELECT * FROM host WHERE first_up NOT NULL WHERE {}'.format(query)
         try:
             return self.cursor.execute(query).fetchall()
@@ -357,7 +368,7 @@ class SQLite:
         return self.cursor.execute(query).fetchall()
         
     def purgeHosts(self, addresses):
-        query = """SELECT * FROM host WHERE ip LIKE ?"""
+        query = """SELECT * FROM host WHERE ip LIKE ? AND first_up > 0"""
         hosts = self.cursor.execute(query, (addresses,)).fetchall()
         deleted = []
         for host in hosts:
@@ -380,7 +391,6 @@ class SQLite:
     def commit(self):
         try:
             self.connection.commit()
-            self.logger.log('Committing to database.',0)
             return True
         except Exception as e:
             print(str(e), file=sys.stderr)
@@ -406,7 +416,6 @@ class SQLite:
 
     def addURL(self, url):
         try:
-            self.addHost(url[3], url[3], -1, '', '')
             query = """INSERT INTO URL (proto,user,password,host,port,path) VALUES (?,?,?,?,?,?)"""
             self.cursor.execute(query, url)
             self.connection.commit()
@@ -419,10 +428,44 @@ class SQLite:
         return self.cursor.execute(query).fetchall()
 
     def updateURLs(self, urls):
+
         query = """UPDATE url SET host=:host,proto=:proto,path=:path,port=:port,
                                   user=:user,password=:password,check_time=:check_time,status=:status,
-                                  headers=:headers,content=:content,certificate=:certificate,expire=:expire
-                              WHERE host = :host AND proto = :proto AND path = :path AND port = :port AND user = :user"""
+                                  headers=:headers,content=:content,certificate=:certificate,expire=:expire,get_error=:get_error
+                              WHERE host = :host AND proto = :proto AND path = :path AND port = :port"""
 
         self.cursor.executemany(query, map(dict,urls))
         self.connection.commit()
+
+    def deleteURLs(self, where_clause = 'hostname not like "%"'):
+        query = 'DELETE FROM url WHERE '+where_clause
+        try:
+            if self.cursor.execute(query):
+                self.logger.log('DELETE FROM url WHERE '+where_clause,1)
+                self.connection.commit()
+                return True
+            else: return False
+        except sqlite3.OperationalError as err:
+            print('Invalid SQL query!',file=sys.stderr)
+            return False
+
+    def updateSNMP(self, snmp_responses, selname):
+        snmp = {}
+        for response in snmp_responses:
+            if response[4] is '': continue
+            snmp['host'] = response[0]
+            snmp['mib'] = response[1]
+            snmp['oid'] = response[2]
+            self.cursor.execute("""INSERT OR IGNORE INTO snmp (host,mib,oid) VALUES (?,?,?)""", (snmp['host'],snmp['mib'],snmp['oid']))
+            snmp['check_time'] = response[3]
+            snmp['value'] = response[4]
+            snmp['selection'] = selname
+            query = """UPDATE snmp SET check_time=:check_time,value=:value WHERE host = :host AND mib = :mib AND oid = :oid"""
+            self.cursor.execute(query, snmp)
+        self.connection.commit()
+
+    def tagHost(self,host,tag,descr):
+        query = """INSERT OR IGNORE INTO host_tag (host,tag) VALUES (?,?)"""
+        self.cursor.execute(query,(host, tag))
+        query = """UPDATE host_tag SET tag = ?, tag_time = ?, description = ? WHERE host = ? AND tag = ?"""
+        self.cursor.execute(query, (tag, int(time()), descr, host, tag))

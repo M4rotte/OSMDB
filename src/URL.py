@@ -28,7 +28,7 @@ def splitURL(url):
         server = ssplit[0]
         port = ssplit[1]
     else:
-        port = ''
+        port = 443
         server = hsplit[0]
     csplit = cred.split(':',2)
     if len(csplit) == 2:

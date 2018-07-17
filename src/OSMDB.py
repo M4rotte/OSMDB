@@ -5,12 +5,15 @@ import sys
 import ipaddress
 import subprocess
 import Host, Logger
-import socket
+import socket, requests
 from multiprocessing import Process, Queue
-from datetime import timedelta
+from datetime import timedelta, datetime
 from time import time
-import requests
+import ssl
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 import Host, SSHClient, Execution, URL
+from SNMP import getSNMP
 
 
 def getDefaultRoute(): 
@@ -25,15 +28,23 @@ def lprint(l):
     if type(l) is not list: l = list(l)
     for i in l: print(i)
 
+
 def GetURL(url, q = Queue(), verify = False):
     """`url` is an URL.URL object. An URL.URL object is also both put in queue q and returned."""
     # TODO : 
     #  - make the use of user/password directly in URL optional
     #  - make the SSL validity verification optional
+    if not url['port']: url['port'] = '443'
+    url['check_time'] = int(time())
     try:
+        ssl_cert = ssl.get_server_certificate((url['host'], int(url['port'])))
+        url['certificate'] = ssl_cert
+        cert = x509.load_pem_x509_certificate(bytes(ssl_cert,'utf-8'), default_backend())
+        url['expire'] = cert.not_valid_after.strftime('%s')
         res = requests.get(repr(url), auth=(url['user'],url['password']), verify=verify)
         url['content'] = res.text
         url['status']  = res.status_code
+        url['get_error']  = ''
     except Exception as e:
         print(str(e),file=sys.stderr)
         url['content'] = ''
@@ -53,31 +64,22 @@ class OSMDB:
         self.configuration['ping_chunk_size'] = self.configuration.get('ping_chunk_size', 32)
         default_url_configuration = {
             'chunk_size': 2,
-            'verify_ssl': False
+            'verify_ssl': 'False'
         }
         self.configuration['url'] = self.configuration.get('url', default_url_configuration)
         
     def __repr__(self): return 'OSMDB'
+    
+    def pingAddr(self, addresses):
         
-    def pingHosts(self, network = '127.0.0.0/8'):
-        """Ping all hosts in a given network and update the database. It returns the list
-           of hosts, each host being a triplet (hostname, fqdn, ping_delay).
-           If network is False the `ip route` external command will be called
-           to get the default route and use it."""
         hosts = []
-        if not network: network = getDefaultRoute()
-        try: net = ipaddress.IPv4Network(network)
-        except ValueError as e:
-            print('Invalid network specification: '+str(e), file=sys.stderr)
-            return hosts
-        addresses = list(net.hosts())
         remaining = len(addresses)
         queue = Queue(remaining)
         self.logger.log('Processing {} addresses in batches of {}.'.format(remaining, str(self.configuration['ping_chunk_size'])), 0)
         batch_index = 1
         start = time()
         try:
-            for chunk in chunks(list(net.hosts()), self.configuration['ping_chunk_size']):
+            for chunk in chunks(addresses, self.configuration['ping_chunk_size']):
                 remaining -= len(chunk)
                 first = chunk[0]
                 last = chunk[-1:][0]
@@ -97,6 +99,25 @@ class OSMDB:
             self.logger.log('Host update cancelled by keyboard interrupt!', 5)
         
         return hosts
+    
+    def pingHosts(self, network = '127.0.0.0/8'):
+        """Ping all hosts in a given network and update the database. It returns the list
+           of hosts, each host being a triplet (hostname, fqdn, ping_delay).
+           If network is False the `ip route` external command will be called
+           to get the default route and use it."""
+        
+        if not network: network = getDefaultRoute()
+        try: net = ipaddress.IPv4Network(network)
+        except ValueError as e:
+            print('Invalid network specification: '+str(e), file=sys.stderr)
+            return []
+        addresses = list(net.hosts())
+        return self.pingAddr(addresses)
+
+    def pingAddresses(self, addresses = []):
+        """Ping all addresses and update the database. It returns the list
+           of hosts, each host being a triplet (hostname, fqdn, ping_delay)."""
+        return self.pingAddr(addresses)
 
     def getURLs(self):
         
@@ -113,7 +134,6 @@ class OSMDB:
             for _ in range(0, len(url_chunk)):
                 item = queue.get()
                 self.logger.log('GET: {} [{}]'.format(item,item['status']), 0)
-                
                 _urls.append(item)
 
         return _urls
@@ -184,7 +204,46 @@ class OSMDB:
             self.logger.log('Can’t add “{}”: {}'.format(url,action))
         else: self.logger.log('Added URL “{}“'.format(url))
 
-    def listURL(self):
-        return list(map(URL.URL, self.db.urls()))
+    def listURL(self): return list(map(URL.URL, self.db.urls()))
+
+    def deleteURLs(self, query): return self.db.deleteURLs(query)
+
+    def getSNMP(self, hosts, mib, oid):
+        
+        responses = []
+        remaining = len(hosts)
+        queue = Queue(remaining)
+        self.logger.log('Querying SNMP for {}:{} on {} hosts in batches of {}.'.format(mib, oid, remaining, self.configuration['snmp']['chunk_size']), 0)
+        batch_index = 1
+        start = time()
+        try:
+            for chunk in chunks(hosts, self.configuration['snmp']['chunk_size']):
+                remaining -= len(chunk)
+                first = chunk[0]
+                last = chunk[-1:][0]
+                self.logger.log('Batch #{:03d} ({}) {} → {}, ({} left)'.format(batch_index, len(chunk), first, last, remaining), 0)
+                for host in chunk:
+                    Process(target=getSNMP, args=(host, queue, mib, oid)).start()
+                for host in chunk:
+                    responses.append(queue.get())
+                batch_index += 1
+            end = time()
+            elapsed = str(timedelta(seconds=(end - start)))
+            rate = len(hosts) / (end - start)
+            self.logger.log('{} hosts checked in {} ({:.2f} a/s)'.format(len(hosts), elapsed, rate), 0)
+
+        except KeyboardInterrupt:
+            self.logger.log('Host update cancelled by keyboard interrupt!', 5)
+
+        return responses
+
+    def updateSNMP(self, snmp_responses, selname):
+        
+        return self.db.updateSNMP(snmp_responses, selname)
+
+    def tagHost(self, fqdn, tag, descr = ''):
+        # TODO: Do not accept anything
+        if descr is False: descr = ''
+        self.db.tagHost(fqdn,tag,descr)
 
 if __name__ == '__main__': sys.exit(100)
