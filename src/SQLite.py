@@ -376,7 +376,7 @@ class SQLite:
         hosts = self.cursor.execute(query, (addresses,)).fetchall()
         deleted = []
         for host in hosts:
-            query = """SELECT fqdn,ip FROM host WHERE ip = ? ORDER BY last_check DESC"""
+            query = """SELECT fqdn,ip FROM host WHERE ip = ? ORDER BY rowid DESC"""
             _hosts = self.cursor.execute(query, (host[2],)).fetchall()
             if len(_hosts) < 2: continue
             else:
