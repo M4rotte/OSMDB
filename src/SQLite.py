@@ -368,6 +368,10 @@ class SQLite:
         return self.cursor.execute(query).fetchall()
         
     def purgeHosts(self, addresses):
+        # First, purge all addresses which never responded.
+        query = """DELETE FROM host WHERE first_up IS NULL"""
+        self.cursor.execute(query)
+        # Secondly, purge doubles (ie: only the most recently seen FQDN for addresses is kept).
         query = """SELECT * FROM host WHERE ip LIKE ? AND first_up > 0"""
         hosts = self.cursor.execute(query, (addresses,)).fetchall()
         deleted = []
@@ -386,6 +390,10 @@ class SQLite:
                     self.cursor.execute(query, (h[0],))
                     deleted.append(host)
         self.connection.commit()
+        # Finally, count hwo many hosts are left in database.
+        query = """SELECT count(rowid) as counf FROM host"""
+        res = self.cursor.execute(query).fetchone()[0]
+        self.logger.log('{} hosts are left in the database after a purge in {}'.format(res,addresses), 1)
         return deleted
 
     def commit(self):
