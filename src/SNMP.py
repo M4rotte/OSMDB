@@ -3,7 +3,6 @@
 """OSMDB SNMP"""
 import sys
 try:
-
     from time import time
     from multiprocessing import Queue
     from pysnmp.hlapi import *
@@ -14,6 +13,7 @@ except ImportError as e:
     sys.exit(1)
 
 def getSNMP(host, queue = Queue(), mib = 'SNMPv2-MIB', oid = 'sysDescr', community = 'public', port = '161'):
+
 
     errorIndication, errorStatus, errorIndex, varBinds = next(
         getCmd(SnmpEngine(),
@@ -33,8 +33,8 @@ def getSNMP(host, queue = Queue(), mib = 'SNMPv2-MIB', oid = 'sysDescr', communi
     try:
         ret = varBinds[0].prettyPrint().split('=')[1].strip()
         queue.put((host,mib,oid,int(time()),ret))
-        return varBinds[0].prettyPrint().split('=')[1].strip()
+
     except IndexError:
         queue.put((host,mib,oid,int(time()),''))
-        return ''
+
 

@@ -6,7 +6,6 @@ try:
         from time import time
         from os import path
         import datetime
-        import logging
         import urllib3
         import Logger
 
@@ -489,8 +488,6 @@ class SQLite:
             snmp['host'] = response[0]
             snmp['mib'] = response[1]
             snmp['oid'] = response[2]
-            logging.basicConfig()
-            logging.CaptureWarning(true)
             urllib3.disable_warnings()
             self.cursor.execute("""INSERT OR IGNORE INTO snmp (host,mib,oid) VALUES (?,?,?)""", (snmp['host'],snmp['mib'],snmp['oid']))
             snmp['check_time'] = response[3]
