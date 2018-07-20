@@ -501,18 +501,16 @@ class SQLite:
 
     def getParameter(self, name, param):
         
-        query = """SELECT fqdn, value FROM host INNER JOIN param ON host.fqdn = param.name WHERE fqdn = ? AND param = ?"""
+        query = """SELECT name, value FROM param WHERE name = ? AND param = ?"""
         try:
             candidate = self.cursor.execute(query, (name,param)).fetchone()[1]
             return candidate
         except (IndexError, TypeError):
-            query = """SELECT name, value FROM param WHERE name = ? AND param = ?"""
             try:
                 domain = name.split('.',1)[1]
                 candidate = self.cursor.execute(query, (domain,param)).fetchone()[1]
                 return candidate
             except (IndexError, TypeError):
-                query = """SELECT name, value FROM param WHERE name = ? AND param = ?"""
                 try:
                     candidate = self.cursor.execute(query, ('*',param)).fetchone()[1]
                     return candidate

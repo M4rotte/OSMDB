@@ -267,6 +267,10 @@ class OSMDB:
         self.db.tagHost(fqdn,tag,descr)
 
     def setParam(self, name, param, value):
+        self.logger.log('Setting {}={} for “{}”'.format(param,value,name),0)
         self.db.setParameter(name, param, value)
+
+    def getParam(self, name, param):
+        return self.db.getParameter(name, param)
 
 if __name__ == '__main__': sys.exit(100)

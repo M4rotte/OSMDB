@@ -197,13 +197,24 @@ elif cmdline.option('T'):
         osmdb.tagHost(hostname,cmdline.option('T'),cmdline.option('-description'))
 
 # Set parameter
-if cmdline.option('X') is True: helpAndExit('set-param')
-if cmdline.option('X') and cmdline.lastTag():
+if cmdline.option('X') is True and (not cmdline.option('s') and not cmdline.option('t')): helpAndExit('set-param')
+elif cmdline.option('X') and cmdline.lastTag() and cmdline.option('X') is not True:
     try:
         param,value = cmdline.lastTag().split('=')
         osmdb.setParam(cmdline.option('X'),param,value)
     except ValueError: helpAndExit('set-param')
-        
+elif cmdline.option('X') is True and (cmdline.option('s') or cmdline.option('t')) and cmdline.lastTag():
+    try:
+        param,value = cmdline.lastTag().split('=')
+        for host in hosts:
+            osmdb.setParam(host,param,value)
+    except ValueError: helpAndExit('set-param')
+
+# Get parameter
+if cmdline.option('x') is True: helpAndExit('get-param')
+if cmdline.option('x') and cmdline.lastTag():
+    print(osmdb.getParam(cmdline.lastTag(),cmdline.option('x')))
+    
 
 # Commit to database what has not yet been committed: tags, parameters
 osmdb.db.commit()
