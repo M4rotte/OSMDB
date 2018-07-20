@@ -24,6 +24,8 @@ short_options = {'--update'    : '-u',
                  '--delete'    : '-D',
                  '--tags'      : '-t',
                  '--set-tag'   : '-T',
+                 '--get-param' : '-x',
+                 '--set-param' : '-X',
                  }
                  
 cmdline = Cmdline.Cmdline(sys.argv, short_options)
@@ -194,6 +196,14 @@ elif cmdline.option('T'):
     for hostname in hosts:
         osmdb.tagHost(hostname,cmdline.option('T'),cmdline.option('-description'))
 
+# Set parameter
+if cmdline.option('X') is True: helpAndExit('set-param')
+if cmdline.option('X') and cmdline.lastTag():
+    try:
+        param,value = cmdline.lastTag().split('=')
+        osmdb.setParam(cmdline.option('X'),param,value)
+    except ValueError: helpAndExit('set-param')
+        
 
-# Commit to database what has not yet been committed: tags
+# Commit to database what has not yet been committed: tags, parameters
 osmdb.db.commit()

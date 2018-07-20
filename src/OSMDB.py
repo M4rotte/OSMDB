@@ -235,11 +235,15 @@ class OSMDB:
                 last = chunk[-1:][0]
                 self.logger.log('Batch #{:03d} ({}) {} → {}, ({} left)'.format(batch_index, len(chunk), first, last, remaining), 0)
                 for host in chunk:
-                    p = Process(target=getSNMP, args=(host, queue, mib, oid))
+                    community = self.db.getParameter(host,'snmp_community')
+                    if community is False: community = self.configuration['snmp']['community']
+                    self.logger.log('Querying {}:{} for {} (community: {})'.format(mib,oid,host,community), 0)
+                    p = Process(target=getSNMP, args=(host, queue, mib, oid, community))
                     p.start()
                     procs.append(p)
                 for proc in procs:
                     proc.join()
+
                 for host in chunk:
                     responses.append(queue.get())
                 batch_index += 1
@@ -250,7 +254,7 @@ class OSMDB:
 
         except KeyboardInterrupt:
             self.logger.log('Host update cancelled by keyboard interrupt!', 5)
-        queue.put(responses)
+
         return responses
 
     def updateSNMP(self, snmp_responses, selname):
@@ -261,5 +265,8 @@ class OSMDB:
         # TODO: Do not accept anything
         if descr is False: descr = ''
         self.db.tagHost(fqdn,tag,descr)
+
+    def setParam(self, name, param, value):
+        self.db.setParameter(name, param, value)
 
 if __name__ == '__main__': sys.exit(100)

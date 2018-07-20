@@ -125,17 +125,13 @@ class SQLite:
 
         self.cursor.execute(snmp_table)
 
-        pkg_table = """CREATE TABLE IF NOT EXISTS pkg (
-                                       host TEXT,
-                                       pkg TEXT,
-                                       oid TEXT,
+        param_table = """CREATE TABLE IF NOT EXISTS param (
+                                       name TEXT,
+                                       param TEXT,
                                        value TEXT,
-                                       check_time INTEGER,
-                                       selection TEXT,
-                                       FOREIGN KEY(host) REFERENCES host(fqdn),
-                                       PRIMARY KEY(host, mib, oid))"""
+                                       PRIMARY KEY(name, param))"""
 
-        self.cursor.execute(snmp_table)
+        self.cursor.execute(param_table)
 
         host_view = """CREATE VIEW IF NOT EXISTS host_view AS SELECT fqdn, tag FROM
                                 host INNER JOIN host_tag ON host.fqdn = host_tag.host"""
@@ -502,3 +498,35 @@ class SQLite:
         self.cursor.execute(query,(host, tag))
         query = """UPDATE host_tag SET tag = ?, tag_time = ?, description = ? WHERE host = ? AND tag = ?"""
         self.cursor.execute(query, (tag, int(time()), descr, host, tag))
+
+    def getParameter(self, name, param):
+        
+        query = """SELECT fqdn, value FROM host INNER JOIN param ON host.fqdn = param.name WHERE fqdn = ? AND param = ?"""
+        try:
+            candidate = self.cursor.execute(query, (name,param)).fetchone()[1]
+            return candidate
+        except (IndexError, TypeError):
+            query = """SELECT name, value FROM param WHERE name = ? AND param = ?"""
+            try:
+                domain = name.split('.',1)[1]
+                candidate = self.cursor.execute(query, (domain,param)).fetchone()[1]
+                return candidate
+            except (IndexError, TypeError):
+                query = """SELECT name, value FROM param WHERE name = ? AND param = ?"""
+                try:
+                    candidate = self.cursor.execute(query, ('*',param)).fetchone()[1]
+                    return candidate
+                except (IndexError, TypeError): return False
+                
+    def setParameter(self, name, param, value):
+        try:
+            query = """INSERT INTO param (name,param,value) VALUES (?,?,?)"""
+            self.cursor.execute(query,(name,param,value))
+        except sqlite3.IntegrityError:
+            pass
+        query = """UPDATE param SET value = ? WHERE name = ? AND param = ?"""
+        self.cursor.execute(query,(value,name,param))
+
+
+        
+        

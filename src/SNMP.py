@@ -15,26 +15,32 @@ except ImportError as e:
 def getSNMP(host, queue = Queue(), mib = 'SNMPv2-MIB', oid = 'sysDescr', community = 'public', port = '161'):
 
 
-    errorIndication, errorStatus, errorIndex, varBinds = next(
-        getCmd(SnmpEngine(),
-               CommunityData(community, mpModel=0),
-               UdpTransportTarget((host, port)),
-               ContextData(),
-               ObjectType(ObjectIdentity(mib, oid, 0)))
-    )
-
-    if errorIndication:
-        print(errorIndication, file=sys.stderr)
-    elif errorStatus:
-        print('%s at %s' % (errorStatus.prettyPrint(),
-                            errorIndex and varBinds[int(errorIndex) - 1][0] or '?'))
-
-    
     try:
+
+        errorIndication, errorStatus, errorIndex, varBinds = next(
+            getCmd(SnmpEngine(),
+                   CommunityData(community, mpModel=0),
+                   UdpTransportTarget((host, port)),
+                   ContextData(),
+                   ObjectType(ObjectIdentity(mib, oid, 0)))
+        )
+
+        if errorIndication:
+            print(errorIndication, file=sys.stderr)
+        elif errorStatus:
+            print('%s at %s' % (errorStatus.prettyPrint(),
+                                errorIndex and varBinds[int(errorIndex) - 1][0] or '?'))
+
+        
+
         ret = varBinds[0].prettyPrint().split('=')[1].strip()
         queue.put((host,mib,oid,int(time()),ret))
 
+    except BrokenPipeError as e:
+        print(str(e),file=sys.stderr)
+
     except IndexError:
         queue.put((host,mib,oid,int(time()),''))
+
 
 

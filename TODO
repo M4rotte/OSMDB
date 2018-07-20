@@ -2,7 +2,7 @@ SSHClient:
 
  - Permit to have an alternate key per host, like is is for username
  - Better way to use the multiple processes, so the next chunks may start before all the previous chunk has finished (use select() ?…).
- - Dpwnload the whole SSL chain ad permit an optional conformity check for URL which provide such a verified SSL infrastructure
+ - Download the whole SSL chain ad permit an optional conformity check for URL which provide such a verified SSL infrastructure
 
 Tag system: tag negation (with !)
 
