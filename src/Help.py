@@ -23,6 +23,7 @@ def helpAndExit(this):
     elif this == 'tag-hosts':          print("""Usage:\n {} --set-tag <tag> <query>
  {} --set-tag <tag> --selection <query> --tags <tag query>""".format(name,name), file=sys.stderr)
     elif this == 'set-param':          print("""Usage: {} --set-param <hostname|domain|*> <param>=<value>""".format(name), file=sys.stderr)
+    elif this == 'get-param':          print("""Usage: {} --get-param <parameter> <hostname|domain>""".format(name), file=sys.stderr)
     sys.exit(99)
 
 
