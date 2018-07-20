@@ -4,7 +4,7 @@ from __future__ import print_function
 import sys
 import time
 import string
-
+from SQLite import humanTime
 
 def splitURL(url):
     split = list(filter(None, url.split('/')))
@@ -53,24 +53,47 @@ class URL(dict):
             self['user'] = url[4]
             self['password'] = url[5]
             self['check_time'] = url[6]
-            self['status'] = url[7]
-            self['headers'] = url[8]
-            self['content'] = url[9]
-            self['certificate'] = url[10]
-            self['expire'] = url[11]
-            self['get_error'] = url[12]
+            self['respnse_time'] = url[7]
+            self['total_time'] = url[8]
+            self['status'] = url[9]
+            self['headers'] = url[10]
+            self['content'] = url[11]
+            self['certificate'] = url[12]
+            self['expire'] = url[13]
+            self['get_error'] = url[14]
 
         except IndexError: pass # Let crash later…
 
 
+    def __str__(self):
+        
+        output1 = self['proto']+'://'
+        if self['user']: user = self['user']
+        else: user = ''
+        if self['password']: password = self['password']
+        else: password = ''
+        if user: output1 += user
+        if password: output1 += ':'+password+'@'
+        output1 += self['host']
+        if self['port']: output1 += ':'+str(self['port'])
+        output1 += self['path']
+        return output1
+
     def __repr__(self):
 
-        output = self['proto']+'://'
-        if self['user']: output += self['user']
-        if self['password']: output += ':@'
-        output += self['host']
-        if self['port']: output += ':'+str(self['port'])
-        output += self['path']
-        return output
+        output1 = self['proto']+'://'
+        if self['user']: user = self['user']
+        else: user = ''
+        if self['password']: password = self['password']
+        else: password = ''
+        if user: output1 += user
+        if password: output1 += ':'+password+'@'
+        output1 += self['host']
+        if self['port']: output1 += ':'+str(self['port'])
+        output1 += self['path']
+        output2 = '[{}]'.format(self['status'])
+        output3 = humanTime(self['expire'])
+        return '{:<80} {:<20} Expire: {}'.format(output1, output2, output3)
+        
 
 if __name__ == '__main__': sys.exit(100)

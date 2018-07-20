@@ -1,10 +1,19 @@
 """SQLite backend"""
 import sys
-import sqlite3
-from time import time
-from os import path
-import datetime
-import Logger
+
+try:
+        import sqlite3
+        from time import time
+        from os import path
+        import datetime
+        import logging
+        import urllib3
+        import Logger
+
+except ImportError as e:
+    print(str(e), file=sys.stderr)
+    print('Cannot find the module(s) listed above. Exiting.', file=sys.stderr)
+    sys.exit(1)
 
 def humanTime(timestamp):
     """Return a formatted time value from timestamp. Time is now if no timestamp is given."""
@@ -83,6 +92,8 @@ class SQLite:
                                        user TEXT,
                                        password TEXT,
                                        check_time INTEGER,
+                                       response_time INTEGER,
+                                       total_time INTEGER,
                                        status TEXT,
                                        headers TEXT,
                                        content TEXT,
@@ -114,7 +125,19 @@ class SQLite:
                                        PRIMARY KEY(host, mib, oid))"""
 
         self.cursor.execute(snmp_table)
-        
+
+        pkg_table = """CREATE TABLE IF NOT EXISTS pkg (
+                                       host TEXT,
+                                       pkg TEXT,
+                                       oid TEXT,
+                                       value TEXT,
+                                       check_time INTEGER,
+                                       selection TEXT,
+                                       FOREIGN KEY(host) REFERENCES host(fqdn),
+                                       PRIMARY KEY(host, mib, oid))"""
+
+        self.cursor.execute(snmp_table)
+
         host_view = """CREATE VIEW IF NOT EXISTS host_view AS SELECT fqdn, tag FROM
                                 host INNER JOIN host_tag ON host.fqdn = host_tag.host"""
 
@@ -368,9 +391,10 @@ class SQLite:
         return self.cursor.execute(query).fetchall()
         
     def purgeHosts(self, addresses):
-        # First, purge all addresses which never responded.
-        query = """DELETE FROM host WHERE first_up IS NULL"""
-        self.cursor.execute(query)
+        # First, purge ALL addresses which never responded.
+        # One could still pin an addresse which is down, just make an insert with first_up is not null.
+        query = """DELETE FROM host WHERE first_up IS NULL AND ip like ?"""
+        self.cursor.execute(query,(addresses,))
         # Secondly, purge doubles (ie: only the most recently seen FQDN for addresses is kept).
         query = """SELECT * FROM host WHERE ip LIKE ? AND first_up > 0"""
         hosts = self.cursor.execute(query, (addresses,)).fetchall()
@@ -387,13 +411,14 @@ class SQLite:
                 for h in _hosts[1:]:
                     self.logger.log('Delete host “{}” having IP {}'.format(h[0],h[1]), 1)
                     query = """DELETE FROM host WHERE fqdn = ?"""
-                    self.cursor.execute(query, (h[0],))
+                    res += self.cursor.execute(query, (h[0],))
                     deleted.append(host)
+        res += len(deleted)
         self.connection.commit()
         # Finally, count hwo many hosts are left in database.
         query = """SELECT count(rowid) as counf FROM host"""
         res = self.cursor.execute(query).fetchone()[0]
-        self.logger.log('{} hosts are left in the database after a purge in {}'.format(res,addresses), 1)
+        self.logger.log('{} hosts are left in the database after a purge on addresses like “{}”'.format(len(deleted),res,addresses), 1)
         return deleted
 
     def commit(self):
@@ -464,6 +489,9 @@ class SQLite:
             snmp['host'] = response[0]
             snmp['mib'] = response[1]
             snmp['oid'] = response[2]
+            logging.basicConfig()
+            logging.CaptureWarning(true)
+            urllib3.disable_warnings()
             self.cursor.execute("""INSERT OR IGNORE INTO snmp (host,mib,oid) VALUES (?,?,?)""", (snmp['host'],snmp['mib'],snmp['oid']))
             snmp['check_time'] = response[3]
             snmp['value'] = response[4]

@@ -2,15 +2,13 @@ SSHClient:
 
  - Permit to have an alternate key per host, like is is for username
  - Better way to use the multiple processes, so the next chunks may start before all the previous chunk has finished (use select() ?…).
- 
+ - Dpwnload the whole SSL chain ad permit an optional conformity check for URL which provide such a verified SSL infrastructure
+
 Tag system: tag negation (with !)
 
 Arguments handling: use the argparse module ? The current arguments handling is quite basic, it can’t handle option repetition for instance (but it’s not needed for now).
 
-Catch error when chunk size is too high so the program raises "max open files" on updating → give up without a crash.
-
 Catch the following error (on snmp update) :
-
 
     2018-07-18 15:54:33 0|OSMDB      Batch #004 (64) sr072882cti3700.hm.dm.ad → sr072639cti3700.hm.dm.ad, (380 left)
     Process Process-498:
@@ -35,3 +33,5 @@ Catch the following error (on snmp update) :
       File "/usr/local/lib/python3.8/site-packages/pysnmp/hlapi/asyncore/transport.py", line 63, in _resolveAddr
         '@'.join([str(x) for x in transportAddr]), sys.exc_info()[1]))
     pysnmp.error.PySnmpError: Bad IPv4/UDP transport address sr052378cti3700.hm.dm.ad.hm.dm.ad@161: [Errno -2] Name or service not known
+
+Looks like it suffixes the domain but in my case the hostname is already a FQDN (and the other field, "hostname", could also contain a plain FQDN)

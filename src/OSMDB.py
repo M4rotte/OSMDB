@@ -2,19 +2,24 @@
 # -*- coding: UTF-8 -*-
 """OSMDB"""
 import sys
-import ipaddress
-import subprocess
-import Host, Logger
-import socket, requests
-from multiprocessing import Process, Queue
-from datetime import timedelta, datetime
-from time import time
-import ssl
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-import Host, SSHClient, Execution, URL
-from SNMP import getSNMP
+try:
+    import ipaddress
+    import subprocess
+    import Host, Logger
+    import socket, requests
+    from multiprocessing import Process, Queue
+    from datetime import timedelta, datetime
+    from time import time
+    import ssl
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    import Host, SSHClient, Execution, URL
+    from SNMP import getSNMP
 
+except ImportError as e:
+    print(str(e), file=sys.stderr)
+    print('Cannot find the module(s) listed above. Exiting.', file=sys.stderr)
+    sys.exit(1)
 
 def getDefaultRoute(): 
     """Call the external command `ip route`. This only works with Linux. The default route is used if no network is given in the command line (--network)."""
@@ -36,21 +41,26 @@ def GetURL(url, q = Queue(), verify = False):
     #  - make the SSL validity verification optional
     if not url['port']: url['port'] = '443'
     url['check_time'] = int(time())
+    start = time()
     try:
         ssl_cert = ssl.get_server_certificate((url['host'], int(url['port'])))
         url['certificate'] = ssl_cert
         cert = x509.load_pem_x509_certificate(bytes(ssl_cert,'utf-8'), default_backend())
         url['expire'] = cert.not_valid_after.strftime('%s')
-        res = requests.get(repr(url), auth=(url['user'],url['password']), verify=verify)
+        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'}
+        res = requests.get(str(url), headers=headers, auth=(url['user'],url['password']), verify=verify, allow_redirects=True)
         url['content'] = res.text
         url['status']  = res.status_code
         url['get_error']  = ''
+        # ~ url['response_time'] = res.total_seconds
     except Exception as e:
         print(str(e),file=sys.stderr)
         url['content'] = ''
         url['status']  = -1
         url['get_error'] = str(e)
     finally:
+        end = time()
+        url['total_time'] = end - start
         q.put(url)
         return url
 
@@ -208,7 +218,7 @@ class OSMDB:
 
     def deleteURLs(self, query): return self.db.deleteURLs(query)
 
-    def getSNMP(self, hosts, mib, oid):
+    def getSNMP(self, hosts, mib, oid, queue = Queue()):
         
         responses = []
         remaining = len(hosts)
@@ -234,7 +244,7 @@ class OSMDB:
 
         except KeyboardInterrupt:
             self.logger.log('Host update cancelled by keyboard interrupt!', 5)
-
+        queue.put(responses)
         return responses
 
     def updateSNMP(self, snmp_responses, selname):

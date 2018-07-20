@@ -6,6 +6,8 @@ try:
     import Logger, Cmdline, Configuration, OSMDB, SSHClient
     from Help import helpAndExit as helpAndExit
     from pprint import pprint
+    from multiprocessing import Queue, Process
+    from time import sleep
 except ImportError as e:
     print(str(e), file=sys.stderr)
     print('Cannot find the module(s) listed above. Exiting.', file=sys.stderr)
@@ -42,13 +44,13 @@ if cmdline.option('A') == 'url':
     if not cmdline.hasTag(): helpAndExit('add-url')
     for url in cmdline.tags:
         osmdb.addURL(url)
-    exit(0)
+    sys.exit(0)
 ## Host addition
 elif cmdline.option('A') == 'host':
     if not cmdline.hasTag(): helpAndExit('add-host')
     for host in cmdline.tags:
         osmdb.addHost(host)
-    exit(0)
+    sys.exit(0)
 ## Help on addition
 if cmdline.option('A'):
     print('Unknown object type: `{}`'.format(cmdline.option('A')), file=sys.stderr)
@@ -96,9 +98,17 @@ if cmdline.option('u') in ['selection','sel'] and len(hosts) > 0:
 
 ## Update SNMP on host selection (if any)
 if cmdline.option('u') in ['snmp']:
-    snmp_responses = osmdb.getSNMP(hosts, mib='SNMPv2-MIB', oid='sysDescr')
-    snmp_responses += osmdb.getSNMP(hosts, mib='SNMPv2-MIB', oid='sysUpTime')
-    osmdb.updateSNMP(snmp_responses,selname)
+    q = Queue()
+    P1 = Process(target=osmdb.getSNMP, args=(hosts, 'SNMPv2-MIB', 'sysDescr',q))
+    P2 = Process(target=osmdb.getSNMP, args=(hosts, 'SNMPv2-MIB', 'sysUpTime',q))
+    P1.start()
+    P2.start()
+    t = P1.join()
+    v = P2.join()
+    res = []
+    ## !! TODO !! ##
+
+    osmdb.updateSNMP(res,selname)
     
 ## If no selection is made nor object type is specified, but update is asked, then update all hosts which has been seen at least once. 
 if cmdline.option('u') is True and not (cmdline.option('t') or cmdline.option('s')):
@@ -139,20 +149,20 @@ if cmdline.option('l') in ['host','hosts']:
         hosts = db.listHosts(cmdline.option('s'), seen_up=False)
     else: hosts = db.listHosts(cmdline.option('s'), seen_up=True)
     osmdb.listHosts(hosts)
-    exit(0)
+    sys.exit(0)
 ## List updates
 elif cmdline.option('l') in ['update','updates']:
     osmdb.listHostUpdates()
-    exit(0)
+    sys.exit(0)
 ## List executions
 elif cmdline.option('l') in ['exec','execution','executions']:
     osmdb.listExecutions()
-    exit(0)
+    sys.exit(0)
 ## List URLs
 elif cmdline.option('l') in ['url','urls']:
     for url in osmdb.listURL():
-        print(url)
-    exit(0)
+        print(repr(url))
+    sys.exit(0)
 ## Help on list
 elif cmdline.option('l'):
     print('Unknown object type: `{}`'.format(cmdline.option('l')), file=sys.stderr)
@@ -173,7 +183,7 @@ if cmdline.option('D') in ['host','hosts']:
     fqdn_list = list(fqdn_set)
     if len(fqdn_list) > 0: osmdb.deleteHosts(fqdn_list)
     else: helpAndExit('delete-host')
-    exit(0)
+    sys.exit(0)
 
 ## Delete URLs
 if cmdline.option('D') in ['url']:
