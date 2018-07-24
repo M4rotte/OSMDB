@@ -408,12 +408,11 @@ class SQLite:
                     query = """DELETE FROM host WHERE fqdn = ?"""
                     res += self.cursor.execute(query, (h[0],))
                     deleted.append(host)
-        res += len(deleted)
         self.connection.commit()
-        # Finally, count hwo many hosts are left in database.
+        # Finally, count how many hosts are left in database.
         query = """SELECT count(rowid) as counf FROM host"""
         res = self.cursor.execute(query).fetchone()[0]
-        self.logger.log('{} hosts are left in the database after a purge on addresses like “{}”'.format(len(deleted),res,addresses), 1)
+        self.logger.log('{} hosts are left in the database after a purge on addresses like “{}”'.format(res,addresses), 1)
         return deleted
 
     def commit(self):
