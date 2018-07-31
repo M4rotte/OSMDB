@@ -189,7 +189,7 @@ class OSMDB:
             execution_l[5] = execution[5].split('\n')
             print(Execution.Execution(execution_l))
     def purgeHosts(self, addresses = '%'):
-        lprint(map(Host.Host,self.db.purgeHosts(addresses)))
+        self.db.purgeHosts(addresses)
     
     def addHost(self, hostname):
         fqdn = socket.getfqdn(hostname).lower()

@@ -406,7 +406,7 @@ class SQLite:
                 for h in _hosts[1:]:
                     self.logger.log('Delete host “{}” having IP {}'.format(h[0],h[1]), 1)
                     query = """DELETE FROM host WHERE fqdn = ?"""
-                    res += self.cursor.execute(query, (h[0],))
+                    self.cursor.execute(query, (h[0],))
                     deleted.append(host)
         self.connection.commit()
         # Finally, count how many hosts are left in database.
