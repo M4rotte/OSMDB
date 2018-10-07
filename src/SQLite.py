@@ -501,10 +501,10 @@ class SQLite:
 
     def deleteTag(self, tag, hosts):
         for host in hosts:
-            self.logger.log('Removing tag “{}” on host “{}”'.format(tag,host[1]),1)
-            ret = query = 'DELETE FROM host_tag WHERE host = ? AND tag = ?'
-            print(ret)
-            self.cursor.execute(query, (host[1], tag))
+            query = 'DELETE FROM host_tag WHERE host = ? AND tag = ?'
+            ret = self.cursor.execute(query, (host[1], tag))
+            if ret.rowcount > 0: self.logger.log('Removing tag “{}” on host “{}”'.format(tag,host[1]),1)
+            else: self.logger.log('“{}” is not tagged “{}”'.format(host[1],tag),1)
 
     def getParameter(self, name, param):
         
