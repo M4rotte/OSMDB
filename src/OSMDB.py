@@ -244,7 +244,7 @@ class OSMDB:
                     community = self.db.getParameter(host,'snmp_community')
                     if community is False: community = self.configuration['snmp']['community']
                     self.logger.log('Querying {}:{} for {} (community: {})'.format(mib,oid,host,community), 0)
-                    p = Process(target=getSNMP, args=(host, queue, mib, oid, community))
+                    p = Process(target=getSNMP, args=(host, queue, mib, oid, community, self.configuration['snmp']['port'], self.logger))
                     p.start()
                     procs.append(p)
                 for proc in procs:

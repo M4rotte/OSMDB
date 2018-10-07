@@ -16,7 +16,8 @@ class Logger:
     def log(self, message, level = 0, f = None):
         """Write a message to the logger’s output if its criticity is over the chosen level."""
         prefix = ''
-        info = '{}|{}'.format(str(level),str(currentframe().f_back.f_locals['self']))
+        try: info = '{}|{}'.format(str(level),str(currentframe().f_back.f_locals['self']))
+        except KeyError: info = '{}|{}'.format(str(level),'')
         if self.log_time: prefix = '{} {:12s} '.format(strftime("%Y-%m-%d %H:%M:%S"),info)
         if level >= self.level:
             if f: print(prefix+str(message), file=f)

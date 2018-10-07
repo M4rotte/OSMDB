@@ -22,8 +22,8 @@ def helpAndExit(this):
     elif this == 'delete-host':        print("""Usage:\n {} --delete host <FQDN> [<FQDN> …]
  {} --delete host --selection <hosts selection query>""".format(name,name,name), file=sys.stderr)
     elif this == 'delete-tag':         print('Usage: {} --delete tag <tag> <hosts selection query>'.format(name), file=sys.stderr)
-    elif this == 'tag-hosts':          print("""Usage:\n {} --set-tag <tag> <hosts selection query>
- {} --set-tag <tag> --selection <hosts selection query> --tags <tag query>""".format(name,name), file=sys.stderr)
+    elif this == 'tag-hosts':          print("""Usage:\n {} --set-tag <tag> --description <description> <hosts selection query>
+ {} --set-tag <tag> --selection <hosts selection query> --tags <tag query> --description <description>""".format(name,name), file=sys.stderr)
     elif this == 'set-param':          print("""Usage: {} --set-param <hostname|domain|*> <param>=<value>""".format(name), file=sys.stderr)
     elif this == 'get-param':          print("""Usage: {} --get-param <parameter> <hostname|domain>""".format(name), file=sys.stderr)
     sys.exit(99)

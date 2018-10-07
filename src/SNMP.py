@@ -6,13 +6,14 @@ try:
     from time import time
     from multiprocessing import Queue
     from pysnmp.hlapi import *
+    import Logger
 
 except ImportError as e:
     print(str(e), file=sys.stderr)
     print('Cannot find the module(s) listed above. Exiting.', file=sys.stderr)
     sys.exit(1)
 
-def getSNMP(host, queue = Queue(), mib = 'SNMPv2-MIB', oid = 'sysDescr', community = 'public', port = '161'):
+def getSNMP(host, queue = Queue(), mib = 'SNMPv2-MIB', oid = 'sysDescr', community = 'public', port = '161', logger = Logger.Logger()):
 
 
     try:
@@ -26,10 +27,10 @@ def getSNMP(host, queue = Queue(), mib = 'SNMPv2-MIB', oid = 'sysDescr', communi
         )
 
         if errorIndication:
-            print(errorIndication, file=sys.stderr)
+            logger.log(host+': '+str(errorIndication), 3)
         elif errorStatus:
-            print('%s at %s' % (errorStatus.prettyPrint(),
-                                errorIndex and varBinds[int(errorIndex) - 1][0] or '?'))
+            logger.log('%s at %s' % (errorStatus.prettyPrint(),
+                                errorIndex and varBinds[int(errorIndex) - 1][0] or '?'), 4)
 
         
 
@@ -37,9 +38,10 @@ def getSNMP(host, queue = Queue(), mib = 'SNMPv2-MIB', oid = 'sysDescr', communi
         queue.put((host,mib,oid,int(time()),ret))
 
     except BrokenPipeError as e:
-        print(str(e),file=sys.stderr)
+        logger.log(host+': '+str(e),4)
+        queue.put((host,mib,oid,int(time()),''))
 
-    except IndexError:
+    except IndexError as e:
         queue.put((host,mib,oid,int(time()),''))
 
 
