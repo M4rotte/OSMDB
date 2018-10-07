@@ -11,6 +11,7 @@ try:
     from datetime import timedelta, datetime
     from time import time
     import ssl
+    import re
     from cryptography import x509
     from cryptography.hazmat.backends import default_backend
     import Host, SSHClient, Execution, URL
@@ -53,7 +54,7 @@ def GetURL(url, q = Queue(), verify = False):
         url['content'] = res.text
         url['status']  = res.status_code
         url['get_error']  = ''
-        # ~ url['response_time'] = res.total_seconds
+        url['response_time'] = res.elapsed.total_seconds()
     except Exception as e:
         print(str(e),file=sys.stderr)
         url['content'] = ''
@@ -64,6 +65,11 @@ def GetURL(url, q = Queue(), verify = False):
         url['total_time'] = end - start
         q.put(url)
         return url
+
+valid_chars = re.compile('[a-zA-Z0-9.\-]{1,128}')
+def isValidObjectName(name):
+    if valid_chars.match(name): return True
+    else: return False
 
 class OSMDB:
     """The Overly Simple Management Database main object."""

@@ -457,7 +457,7 @@ class SQLite:
     def updateURLs(self, urls):
 
         query = """UPDATE url SET host=:host,proto=:proto,path=:path,port=:port,
-                                  user=:user,password=:password,check_time=:check_time,status=:status,
+                                  user=:user,password=:password,check_time=:check_time,response_time=:response_time,total_time=:total_time,status=:status,
                                   headers=:headers,content=:content,certificate=:certificate,expire=:expire,get_error=:get_error
                               WHERE host = :host AND proto = :proto AND path = :path AND port = :port"""
 
@@ -493,11 +493,14 @@ class SQLite:
         self.connection.commit()
 
     def tagHost(self,host,tag,descr):
-        self.logger.log('Adding tag “{}” on host “{}”. {}'.format(tag,host,descr),1)
         query = """INSERT OR IGNORE INTO host_tag (host,tag) VALUES (?,?)"""
-        self.cursor.execute(query,(host, tag))
+        ret = self.cursor.execute(query,(host, tag))
+        if ret.rowcount > 0: self.logger.log('Adding tag “{}” on host “{}”. {}'.format(tag,host,descr),1)
+        else: self.logger.log('Host “{}” already tagged “{}”'.format(host,tag),2)
         query = """UPDATE host_tag SET tag = ?, tag_time = ?, description = ? WHERE host = ? AND tag = ?"""
         self.cursor.execute(query, (tag, int(time()), descr, host, tag))
+        self.logger.log('Updating tag “{}” on host “{}”. {}'.format(tag,host,descr),1)
+
 
     def deleteTag(self, tag, hosts):
         for host in hosts:

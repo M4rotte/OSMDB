@@ -46,21 +46,21 @@ class URL(dict):
 
         try:
             super().__init__()
-            self['host'] = url[0]
-            self['proto'] = url[1]
-            self['path'] = url[2]
-            self['port'] = url[3]
-            self['user'] = url[4]
-            self['password'] = url[5]
-            self['check_time'] = url[6]
-            self['respnse_time'] = url[7]
-            self['total_time'] = url[8]
-            self['status'] = url[9]
-            self['headers'] = url[10]
-            self['content'] = url[11]
-            self['certificate'] = url[12]
-            self['expire'] = url[13]
-            self['get_error'] = url[14]
+            self['host']          = url[0]
+            self['proto']         = url[1]
+            self['path']          = url[2]
+            self['port']          = url[3]
+            self['user']          = url[4]
+            self['password']      = url[5]
+            self['check_time']    = url[6]
+            self['response_time'] = url[7]
+            self['total_time']    = url[8]
+            self['status']        = url[9]
+            self['headers']       = url[10]
+            self['content']       = url[11]
+            self['certificate']   = url[12]
+            self['expire']        = url[13]
+            self['get_error']     = url[14]
 
         except IndexError: pass # Let crash later…
 
@@ -91,7 +91,7 @@ class URL(dict):
         output1 += self['host']
         if self['port']: output1 += ':'+str(self['port'])
         output1 += self['path']
-        output2 = '[{}]'.format(self['status'])
+        output2 = '[{}/{}]'.format(self['status'],self['response_time'])
         output3 = humanTime(self['expire'])
         return '{:<80} {:<20} Expire: {}'.format(output1, output2, output3)
         
