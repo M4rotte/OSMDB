@@ -66,7 +66,7 @@ def GetURL(url, q = Queue(), verify = False):
         q.put(url)
         return url
 
-valid_chars = re.compile('[a-zA-Z0-9.\-]{1,128}')
+valid_chars = re.compile('^[a-zA-Z0-9.\-]{1,128}$')
 def isValidObjectName(name):
     if valid_chars.match(name): return True
     else: return False
@@ -198,11 +198,16 @@ class OSMDB:
         self.db.purgeHosts(addresses)
     
     def addHost(self, hostname):
+        if not isValidObjectName(hostname):
+            self.logger.log('“{}” is not a valid name for a host.'.format(hostname),2)
+            return False
         fqdn = socket.getfqdn(hostname).lower()
         try: ip = socket.gethostbyname(hostname)
         except socket.gaierror as e:
             ip = ''
         self.db.addHost(hostname, fqdn, ip=ip)
+        self.db.commit()
+        return True
 
     def deleteHosts(self, fqdn_list):
 
@@ -219,7 +224,9 @@ class OSMDB:
         action = self.db.addURL((proto,user,password,server,port,path))
         if action != True:
             self.logger.log('Can’t add “{}”: {}'.format(url,action))
-        else: self.logger.log('Added URL “{}“'.format(url))
+        else:
+            self.logger.log('Added URL “{}“'.format(url))
+            
 
     def listURL(self): return list(map(URL.URL, self.db.urls()))
 
@@ -270,7 +277,11 @@ class OSMDB:
     def tagHost(self, fqdn, tag, descr = ''):
         # TODO: Do not accept anything
         if descr is False: descr = ''
+        if not isValidObjectName(tag):
+            self.logger.log('“{}” is not a valid name for a tag.'.format(tag),2)
+            return False 
         self.db.tagHost(fqdn,tag,descr)
+        return True
 
     def deleteTag(self, tag, selection):
 

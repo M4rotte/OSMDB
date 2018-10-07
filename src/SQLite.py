@@ -185,9 +185,10 @@ class SQLite:
             self.cursor.execute(query, (hostname, fqdn, delay, user, ip))
             if self.cursor.lastrowid > last_id:
                 self.logger.log('Host “{}” inserted into database.'.format(hostname),0)
+                self.connection.commit()
                 return True
             else:
-                # ~ print(self.listHosts('hostname LIKE "{}"'.format(hostname), seen_up=False)[0])
+                print(self.listHosts('hostname LIKE "{}"'.format(hostname), seen_up=False)[0])
                 return False
         except sqlite3.OperationalError as err:
             self.logger.log('Cant’t insert into host table! ({})'.format(err),12)

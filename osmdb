@@ -193,9 +193,13 @@ if cmdline.option('D') in ['tag']:
     else: helpAndExit('delete-tag')
 
 # Tag hosts
+if cmdline.option('T'):
+    if not OSMDB.isValidObjectName(cmdline.option('T')):
+        print('“{}” is not a valid tag name.'.format(cmdline.option('T')), file=sys.stderr)
+        sys.exit(1)
 if cmdline.option('T') is True or ( cmdline.option('T') and not cmdline.lastTag() and not cmdline.option('t') and not cmdline.option('s')): helpAndExit('tag-hosts')
 ## Use the host selection query directly provided as last tag (last non option/value token on the command line)
-if cmdline.option('T') and not (cmdline.option('s') or cmdline.option('t')) :
+if cmdline.option('T') and not (cmdline.option('s') or cmdline.option('t')):
     for host in osmdb.selectHosts(cmdline.lastTag()):
         osmdb.tagHost(host[1],cmdline.option('T'), cmdline.option('descr'))
 ## Use the main hostname selection (union of --selection (-s) and --tags (-t) options) as soon as one of the two options is present.
