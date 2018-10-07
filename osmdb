@@ -13,19 +13,20 @@ except ImportError as e:
     print('Cannot find the module(s) listed above. Exiting.', file=sys.stderr)
     sys.exit(1)
 
-short_options = {'--update'    : '-u',
-                 '--network'   : '-n',
-                 '--list'      : '-l',
-                 '--execute'   : '-e',
-                 '--deploy'    : '-d',
-                 '--selection' : '-s',
-                 '--purge'     : '-P',
-                 '--add'       : '-A',
-                 '--delete'    : '-D',
-                 '--tags'      : '-t',
-                 '--set-tag'   : '-T',
-                 '--get-param' : '-x',
-                 '--set-param' : '-X',
+short_options = {'--update'      : '-u',
+                 '--network'     : '-n',
+                 '--list'        : '-l',
+                 '--execute'     : '-e',
+                 '--deploy'      : '-d',
+                 '--selection'   : '-s',
+                 '--purge'       : '-P',
+                 '--add'         : '-A',
+                 '--delete'      : '-D',
+                 '--tags'        : '-t',
+                 '--set-tag'     : '-T',
+                 '--description' : '-descr',
+                 '--get-param'   : '-x',
+                 '--set-param'   : '-X',
                  }
                  
 cmdline = Cmdline.Cmdline(sys.argv, short_options)
@@ -185,16 +186,23 @@ if cmdline.option('D') in ['url']:
         osmdb.deleteURLs(cmdline.lastTag())
     else: helpAndExit('delete-url')
 
+## Delete a tag on a hosts selection
+if cmdline.option('D') in ['tag']:
+    if len(cmdline.tags) == 1 and cmdline.option('s'):
+        osmdb.deleteTag(cmdline.tags[0],cmdline.option('s'))
+    else: helpAndExit('delete-tag')
+
 # Tag hosts
 if cmdline.option('T') is True or ( cmdline.option('T') and not cmdline.lastTag() and not cmdline.option('t') and not cmdline.option('s')): helpAndExit('tag-hosts')
 ## Use the host selection query directly provided as last tag (last non option/value token on the command line)
 if cmdline.option('T') and not (cmdline.option('s') or cmdline.option('t')) :
     for host in osmdb.selectHosts(cmdline.lastTag()):
-        osmdb.tagHost(host[1],cmdline.option('T'), cmdline.option('-description'))
+        osmdb.tagHost(host[1],cmdline.option('T'), cmdline.option('descr'))
 ## Use the main hostname selection (union of --selection (-s) and --tags (-t) options) as soon as one of the two options is present.
 elif cmdline.option('T'):
     for hostname in hosts:
-        osmdb.tagHost(hostname,cmdline.option('T'),cmdline.option('-description'))
+        osmdb.tagHost(hostname,cmdline.option('T'),cmdline.option('descr'))
+
 
 # Set parameter
 if cmdline.option('X') is True and (not cmdline.option('s') and not cmdline.option('t')): helpAndExit('set-param')

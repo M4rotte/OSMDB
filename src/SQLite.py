@@ -493,10 +493,18 @@ class SQLite:
         self.connection.commit()
 
     def tagHost(self,host,tag,descr):
+        self.logger.log('Adding tag “{}” on host “{}”. {}'.format(tag,host,descr),1)
         query = """INSERT OR IGNORE INTO host_tag (host,tag) VALUES (?,?)"""
         self.cursor.execute(query,(host, tag))
         query = """UPDATE host_tag SET tag = ?, tag_time = ?, description = ? WHERE host = ? AND tag = ?"""
         self.cursor.execute(query, (tag, int(time()), descr, host, tag))
+
+    def deleteTag(self, tag, hosts):
+        for host in hosts:
+            self.logger.log('Removing tag “{}” on host “{}”'.format(tag,host[1]),1)
+            ret = query = 'DELETE FROM host_tag WHERE host = ? AND tag = ?'
+            print(ret)
+            self.cursor.execute(query, (host[1], tag))
 
     def getParameter(self, name, param):
         

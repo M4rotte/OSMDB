@@ -266,6 +266,10 @@ class OSMDB:
         if descr is False: descr = ''
         self.db.tagHost(fqdn,tag,descr)
 
+    def deleteTag(self, tag, selection):
+
+        return self.db.deleteTag(tag, self.selectHosts(selection, status = 'ALL'))
+
     def setParam(self, name, param, value):
         self.logger.log('Setting {}={} for “{}”'.format(param,value,name),0)
         self.db.setParameter(name, param, value)
