@@ -114,6 +114,7 @@ if cmdline.option('u') is True and not (cmdline.option('t') or cmdline.option('s
 # If -t (or -s) are the only options on command line then print the selection and exit.
 if len(cmdline.options.keys()) in [2,3] and ( cmdline.option('t') or cmdline.option('s') ):
     osmdb.listHostsByNames(hosts)
+    sys.exit(0)
 
 # Instanciate a SSH client if option --execute or --deploy is used.
 if 'd' in cmdline.options or 'e' in cmdline.options:
