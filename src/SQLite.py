@@ -185,9 +185,10 @@ class SQLite:
             self.cursor.execute(query, (hostname, fqdn, delay, user, ip))
             if self.cursor.lastrowid > last_id:
                 self.logger.log('Host “{}” inserted into database.'.format(hostname),0)
+                self.connection.commit()
                 return True
             else:
-                # ~ print(self.listHosts('hostname LIKE "{}"'.format(hostname), seen_up=False)[0])
+                print(self.listHosts('hostname LIKE "{}"'.format(hostname), seen_up=False)[0])
                 return False
         except sqlite3.OperationalError as err:
             self.logger.log('Cant’t insert into host table! ({})'.format(err),12)
@@ -457,7 +458,7 @@ class SQLite:
     def updateURLs(self, urls):
 
         query = """UPDATE url SET host=:host,proto=:proto,path=:path,port=:port,
-                                  user=:user,password=:password,check_time=:check_time,status=:status,
+                                  user=:user,password=:password,check_time=:check_time,response_time=:response_time,total_time=:total_time,status=:status,
                                   headers=:headers,content=:content,certificate=:certificate,expire=:expire,get_error=:get_error
                               WHERE host = :host AND proto = :proto AND path = :path AND port = :port"""
 
@@ -494,9 +495,20 @@ class SQLite:
 
     def tagHost(self,host,tag,descr):
         query = """INSERT OR IGNORE INTO host_tag (host,tag) VALUES (?,?)"""
-        self.cursor.execute(query,(host, tag))
+        ret = self.cursor.execute(query,(host, tag))
+        if ret.rowcount > 0: self.logger.log('Adding tag “{}” on host “{}”. {}'.format(tag,host,descr),1)
+        else: self.logger.log('Host “{}” already tagged “{}”'.format(host,tag),2)
         query = """UPDATE host_tag SET tag = ?, tag_time = ?, description = ? WHERE host = ? AND tag = ?"""
         self.cursor.execute(query, (tag, int(time()), descr, host, tag))
+        self.logger.log('Updating tag “{}” on host “{}”. {}'.format(tag,host,descr),1)
+
+
+    def deleteTag(self, tag, hosts):
+        for host in hosts:
+            query = 'DELETE FROM host_tag WHERE host = ? AND tag = ?'
+            ret = self.cursor.execute(query, (host[1], tag))
+            if ret.rowcount > 0: self.logger.log('Removing tag “{}” on host “{}”'.format(tag,host[1]),1)
+            else: self.logger.log('“{}” is not tagged “{}”'.format(host[1],tag),1)
 
     def getParameter(self, name, param):
         

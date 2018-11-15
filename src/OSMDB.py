@@ -11,6 +11,7 @@ try:
     from datetime import timedelta, datetime
     from time import time
     import ssl
+    import re
     from cryptography import x509
     from cryptography.hazmat.backends import default_backend
     import Host, SSHClient, Execution, URL
@@ -53,7 +54,7 @@ def GetURL(url, q = Queue(), verify = False):
         url['content'] = res.text
         url['status']  = res.status_code
         url['get_error']  = ''
-        # ~ url['response_time'] = res.total_seconds
+        url['response_time'] = res.elapsed.total_seconds()
     except Exception as e:
         print(str(e),file=sys.stderr)
         url['content'] = ''
@@ -64,6 +65,11 @@ def GetURL(url, q = Queue(), verify = False):
         url['total_time'] = end - start
         q.put(url)
         return url
+
+valid_chars = re.compile('^[a-zA-Z0-9.\-]{1,128}$')
+def isValidObjectName(name):
+    if valid_chars.match(name): return True
+    else: return False
 
 class OSMDB:
     """The Overly Simple Management Database main object."""
@@ -192,11 +198,16 @@ class OSMDB:
         self.db.purgeHosts(addresses)
     
     def addHost(self, hostname):
+        if not isValidObjectName(hostname):
+            self.logger.log('“{}” is not a valid name for a host.'.format(hostname),2)
+            return False
         fqdn = socket.getfqdn(hostname).lower()
         try: ip = socket.gethostbyname(hostname)
         except socket.gaierror as e:
             ip = ''
         self.db.addHost(hostname, fqdn, ip=ip)
+        self.db.commit()
+        return True
 
     def deleteHosts(self, fqdn_list):
 
@@ -213,7 +224,9 @@ class OSMDB:
         action = self.db.addURL((proto,user,password,server,port,path))
         if action != True:
             self.logger.log('Can’t add “{}”: {}'.format(url,action))
-        else: self.logger.log('Added URL “{}“'.format(url))
+        else:
+            self.logger.log('Added URL “{}“'.format(url))
+            
 
     def listURL(self): return list(map(URL.URL, self.db.urls()))
 
@@ -238,7 +251,7 @@ class OSMDB:
                     community = self.db.getParameter(host,'snmp_community')
                     if community is False: community = self.configuration['snmp']['community']
                     self.logger.log('Querying {}:{} for {} (community: {})'.format(mib,oid,host,community), 0)
-                    p = Process(target=getSNMP, args=(host, queue, mib, oid, community))
+                    p = Process(target=getSNMP, args=(host, queue, mib, oid, community, self.configuration['snmp']['port'], self.logger))
                     p.start()
                     procs.append(p)
                 for proc in procs:
@@ -264,7 +277,15 @@ class OSMDB:
     def tagHost(self, fqdn, tag, descr = ''):
         # TODO: Do not accept anything
         if descr is False: descr = ''
+        if not isValidObjectName(tag):
+            self.logger.log('“{}” is not a valid name for a tag.'.format(tag),2)
+            return False 
         self.db.tagHost(fqdn,tag,descr)
+        return True
+
+    def deleteTag(self, tag, selection):
+
+        return self.db.deleteTag(tag, self.selectHosts(selection, status = 'ALL'))
 
     def setParam(self, name, param, value):
         self.logger.log('Setting {}={} for “{}”'.format(param,value,name),0)

@@ -35,3 +35,5 @@ Catch the following error (on snmp update) :
     pysnmp.error.PySnmpError: Bad IPv4/UDP transport address sr052378cti3700.hm.dm.ad.hm.dm.ad@161: [Errno -2] Name or service not known
 
 Looks like it suffixes the domain but in my case the hostname is already a FQDN (and the other field, "hostname", could also contain a plain FQDN)
+
+SNMPClient: Make a SNMP class instead of using the global namespace (so the Logger may be able to call currentframe().f_back.f_locals['self'] to know from which object it is called). Currently it just don’t get the info.
