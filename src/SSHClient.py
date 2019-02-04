@@ -96,7 +96,7 @@ class SSHClient:
             f.write(self.key.private_bytes(encoding=crypto_serialization.Encoding.PEM,
                     format=crypto_serialization.PrivateFormat.TraditionalOpenSSL,
                     encryption_algorithm=crypto_serialization.NoEncryption()))
-        chmod(0o600, keyfile)
+        chmod(keyfile, 0o600)
         with open(pubkeyfile, 'wb') as f: f.write(self.key.public_key().public_bytes(crypto_serialization.Encoding.OpenSSH, \
     crypto_serialization.PublicFormat.OpenSSH))
         
