@@ -4,7 +4,7 @@ try:
     sys.path.insert(0, './src')
     from SQLite import SQLite as DB
     import Logger, Cmdline, Configuration, OSMDB, SSHClient
-    from Help import helpAndExit as helpAndExit
+    from Help import helpAndExit, GeneralHelp
     from pprint import pprint
     from multiprocessing import Queue, Process
     from time import sleep
@@ -27,9 +27,13 @@ short_options = {'--update'      : '-u',
                  '--description' : '-descr',
                  '--get-param'   : '-x',
                  '--set-param'   : '-X',
+                 '--help'        : '-h'
                  }
                  
 cmdline = Cmdline.Cmdline(sys.argv, short_options)
+if cmdline.option('h'):
+    GeneralHelp()
+    exit(1)
 configuration = Configuration.Configuration()
 logger = Logger.Logger()
 logger.log_time = True
@@ -124,7 +128,7 @@ if 'd' in cmdline.options or 'e' in cmdline.options:
 
 # Deploy 
 if cmdline.option('d'):
-    if cmdline.option('d') is True: osmdb.deploy(ssh_client.rsakey, osmdb.selectHosts(status='UP'))
+    if cmdline.option('d') is True: helpAndExit('deploy')
     else: osmdb.deploy(ssh_client.rsakey, osmdb.selectHosts(cmdline.option('d'), status='ALL'))
 
 # Execute
@@ -195,6 +199,7 @@ if cmdline.option('D') in ['tag']:
 
 # Tag hosts
 if cmdline.option('T'):
+    if cmdline.option('T') is True: helpAndExit('tag-hosts')
     if not OSMDB.isValidObjectName(cmdline.option('T')):
         print('“{}” is not a valid tag name.'.format(cmdline.option('T')), file=sys.stderr)
         sys.exit(1)

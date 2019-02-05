@@ -132,7 +132,7 @@ class SSHClient:
             stdout = list(std[1])
             stderr = list(std[2])
             end    = time()
-            q.put((host.user, host, cmdline, return_code, stdout, stderr, exec_status, start, end))
+            q.put((host.user, host, cmdline, return_code, map(str.strip,stdout), map(str.strip,stderr), exec_status, start, end))
             self.client.close()
 
         except (paramiko.ssh_exception.AuthenticationException,

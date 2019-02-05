@@ -68,8 +68,10 @@ def GetURL(url, q = Queue(), verify = False):
 
 valid_chars = re.compile('^[a-zA-Z0-9.\-]{1,128}$')
 def isValidObjectName(name):
-    if valid_chars.match(name): return True
-    else: return False
+    try:
+        if valid_chars.match(name): return True
+        else: return False
+    except TypeError: return False
 
 class OSMDB:
     """The Overly Simple Management Database main object."""
