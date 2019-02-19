@@ -9,8 +9,7 @@ try:
     from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.hazmat.backends import default_backend as crypto_default_backend
     from time import time, strftime
-
-    from hashlib import blake2b
+    from hashlib import sha512 as blake2b
     from signal import SIGALRM
     from time import time
     import paramiko
