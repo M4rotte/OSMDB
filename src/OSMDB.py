@@ -45,12 +45,14 @@ def GetURL(url, q = Queue(), verify = False):
     url['check_time'] = int(time())
     start = time()
     try:
-        ssl_cert = ssl.get_server_certificate((url['host'], int(url['port'])))
+        #print('Processing {} …'.format(url),file=sys.stderr)
+        ssl_cert = ssl.get_server_certificate((url['host'], int(url['port'])), ca_certs=None)
+        #print('SSL cert for {} is {}'.format(url,ssl_cert),file=sys.stderr)
         url['certificate'] = ssl_cert
         cert = x509.load_pem_x509_certificate(bytes(ssl_cert,'utf-8'), default_backend())
         url['expire'] = cert.not_valid_after.strftime('%s')
         headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'}
-        res = requests.get(str(url), headers=headers, auth=(url['user'],url['password']), verify=verify, allow_redirects=True)
+        res = requests.get(str(url), headers=headers, auth=(url['user'],url['password']), verify=verify, allow_redirects=True, timeout=10)
         url['content'] = res.text
         url['status']  = res.status_code
         url['get_error']  = ''
@@ -145,16 +147,16 @@ class OSMDB:
         self.logger.log('GET request on {} URLs in chunks of {}'.format(len(urls),self.configuration['url']['chunk_size']), 0)
         if self.configuration['url']['verify_ssl'] == 'True': verify = True
         else: verify = False
-        for url_chunk in chunks(urls, self.configuration['url']['chunk_size']):
+        chunk_list = list(chunks(urls, self.configuration['url']['chunk_size']))
+        for url_chunk in chunk_list:
             queue = Queue(self.configuration['url']['chunk_size'])
             for url in url_chunk:
                 self.logger.log('GET: {} …'.format(url), 0)
                 Process(target=GetURL,args=((url,queue,verify))).start()
-            for _ in range(0, len(url_chunk)):
+            for _ in range(1, len(url_chunk)):
                 item = queue.get()
                 self.logger.log('GET: {} [{}]'.format(item,item['status']), 0)
                 _urls.append(item)
-
         return _urls
         
     
@@ -165,7 +167,8 @@ class OSMDB:
             urls = self.getURLs()
             self.db.updateURLs(urls)
 
-        except TypeError:
+        except TypeError as e:
+            print(str(e),file=sys.stderr)
             return False
 
     def execOnHosts(self,command='', hosts = []):

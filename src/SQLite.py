@@ -464,6 +464,7 @@ class SQLite:
 
         self.cursor.executemany(query, map(dict,urls))
         self.connection.commit()
+        return True
 
     def deleteURLs(self, where_clause = 'hostname not like "%"'):
         query = 'DELETE FROM url WHERE '+where_clause

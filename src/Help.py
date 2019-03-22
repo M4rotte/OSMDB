@@ -52,10 +52,12 @@ Remove host(s) from database: {name} --delete/-D host --selection/-s <hosts sele
 Remove URL(s) from database:  {name} --delete/-D url <URLs selection query>
 Remove tag from host(s):      {name} --delete/-D tag <tag> <hosts selection query>
 Execute command on host(s):   {name} --execute/-e <commande> --selection/-s <hosts selection query>
+List last updates             {name} --list/-l update
 List last executions:         {name} --list/-l execution
 Set parameter for host(s):    {name} --set-param/-X <hostname|domain|*> <param>=<value>
 Get parameters for host:      {name} --get-param/-x <parameter> <hostname|domain>
 Deploy on host(s):            {name} --deploy/-d <hosts selection query>
+Purge duplicated hosts        {name} --purge/-P <hosts selection query>
 
 """.format(name=name), file=sys.stderr)
 
