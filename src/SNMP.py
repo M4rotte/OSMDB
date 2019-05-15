@@ -34,7 +34,7 @@ def getSNMP(host, queue = Queue(), mib = 'SNMPv2-MIB', oid = 'sysDescr', communi
 
         
 
-        ret = varBinds[0].prettyPrint().split('=')[1].strip().replace('\n',' ')
+        ret = varBinds[0].prettyPrint().split('=')[1].strip().replace('\n',' ').replace('\r',' ')
         queue.put((host,mib,oid,int(time()),ret))
 
     except BrokenPipeError as e:
