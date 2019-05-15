@@ -108,7 +108,17 @@ if cmdline.option('u') in ['snmp']:
     res = osmdb.getSNMP(hosts, 'SNMPv2-MIB', 'sysDescr')
     res += osmdb.getSNMP(hosts, 'SNMPv2-MIB', 'sysUpTime')
     osmdb.updateSNMP(res,selname)
-    
+
+## Update description on host selection (if any)
+if cmdline.option('u') in ['description','descr','desc']:
+    res = osmdb.getSNMP(hosts, 'SNMPv2-MIB', 'sysDescr')
+    osmdb.updateSNMP(res,selname)
+
+## Update uptime on host selection (if any)
+if cmdline.option('u') in ['uptime']:
+    res = osmdb.getSNMP(hosts, 'SNMPv2-MIB', 'sysUpTime')
+    osmdb.updateSNMP(res,selname)
+
 ## If no selection is made nor object type is specified, but update is asked, then update all hosts which has been seen at least once. 
 if cmdline.option('u') is True and not (cmdline.option('t') or cmdline.option('s')):
     hosts = []
