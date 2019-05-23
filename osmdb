@@ -13,28 +13,29 @@ except ImportError as e:
     print('Cannot find the module(s) listed above. Exiting.', file=sys.stderr)
     sys.exit(1)
 
-short_options = {'--update'      : '-u',
-                 '--network'     : '-n',
-                 '--list'        : '-l',
-                 '--execute'     : '-e',
-                 '--deploy'      : '-d',
-                 '--selection'   : '-s',
-                 '--purge'       : '-P',
-                 '--add'         : '-A',
-                 '--delete'      : '-D',
-                 '--tags'        : '-t',
-                 '--set-tag'     : '-T',
-                 '--description' : '-descr',
-                 '--get-param'   : '-x',
-                 '--set-param'   : '-X',
-                 '--help'        : '-h'
+short_options = {'--update'          : '-u',
+                 '--network'         : '-n',
+                 '--list'            : '-l',
+                 '--execute'         : '-e',
+                 '--deploy'          : '-d',
+                 '--selection'       : '-s',
+                 '--purge'           : '-P',
+                 '--add'             : '-A',
+                 '--delete'          : '-D',
+                 '--tags'            : '-t',
+                 '--set-tag'         : '-T',
+                 '--description'     : '-descr',
+                 '--get-param'       : '-x',
+                 '--set-param'       : '-X',
+                 '--snmp-community'  : '-C',
+                 '--help'            : '-h'
                  }
                  
 cmdline = Cmdline.Cmdline(sys.argv, short_options)
 if cmdline.option('h'):
     GeneralHelp()
     exit(1)
-configuration = Configuration.Configuration()
+configuration = Configuration.Configuration(cmdline)
 logger = Logger.Logger()
 logger.log_time = True
 db = DB(configuration.configuration,logger)

@@ -6,6 +6,7 @@ try:
     from time import time
     from multiprocessing import Queue
     from pysnmp.hlapi import *
+    from pysnmp.error import *
     import Logger
 
 except ImportError as e:
@@ -44,5 +45,6 @@ def getSNMP(host, queue = Queue(), mib = 'SNMPv2-MIB', oid = 'sysDescr', communi
     except IndexError as e:
         queue.put((host,mib,oid,int(time()),''))
 
-
-
+    except PySnmpError as e:
+        logger.log(host+': '+str(e),4)
+        queue.put((host,mib,oid,int(time()),''))

@@ -159,21 +159,15 @@ class SQLite:
             hosts.append('{:30s} {:4s}\t{}\t{}\t{}\t{:.6f}%'.format(hostname,status,check,last_nb,last,availability))  
         return hosts
 
-    def hostAlive(self, hostname):
-        query = """SELECT ping_delay FROM host WHERE hostname = ?"""
+    def hostAliveOrSeenOnce(self, hostname):
+        query = """SELECT ping_delay, first_up FROM host WHERE hostname = ?"""
         try:
+            alive = seen_once = False
             result = self.cursor.execute(query, (hostname,)).fetchall()[0]
-            if result[0] != -1: return True
-            else: return False
-        except IndexError: return False
-
-    def hostSeenOnce(self, hostname):
-        query = """SELECT first_up FROM host WHERE hostname = ?"""
-        try:
-            result = self.cursor.execute(query, (hostname,)).fetchall()[0]
-            if result[0] not in [-1, None]: return True
-            else: return False
-        except IndexError: return False
+            if result[0] != -1: alive = True
+            if result[1]: seen_once = True
+            return (alive, seen_once)
+        except IndexError: return (False, False)
 
     def addHost(self, hostname, fqdn, delay = -1, user = '', ip = ''):
         """Add a host in database if it doesn’t already exist."""
@@ -206,70 +200,48 @@ class SQLite:
         else: return self.configuration['ssh']['default_user']
             
     def updateHosts(self, ping_delays, network_name = None):
-        
-        
+        """Update table “host”"""
         nb_up = nb_down = nb_new = nb_lost = nb_back = 0
         start = time()
         for hostname,fqdn,delay,ip in ping_delays:
-            alive = self.hostAlive(hostname)
-            seen_once = self.hostSeenOnce(hostname)
+            alive, seen_once = self.hostAliveOrSeenOnce(hostname)
             user = self.hostUser(fqdn)
             self.addHost(hostname, fqdn, delay, user, ip)
             now = int(start)
             try:
-                query = """UPDATE host SET last_check = ? WHERE hostname = ?"""
-                self.cursor.execute(query, (now, hostname))
-                query = """UPDATE host SET ping_delay = ? WHERE hostname = ?"""
-                self.cursor.execute(query, (delay, hostname))
+                query = """UPDATE host SET last_check = ?, ping_delay = ? WHERE hostname = ?"""
+                self.cursor.execute(query, (now, delay, hostname))                
                 if delay is -1:
                     nb_down += 1
                     query = """UPDATE host SET down = down + 1 WHERE hostname = ?"""
                     self.cursor.execute(query, (hostname,))
                     if not alive:
-                        # ~ print('Host “'+hostname+'” was dead and still is.')
-                        query = """UPDATE host SET adjacent_down = adjacent_down + 1 WHERE hostname = ?"""
-                        self.cursor.execute(query, (hostname,))
-                        query = """UPDATE host SET last_down = ? WHERE hostname = ?"""
-                        self.cursor.execute(query, (now, hostname))
+                        query = """UPDATE host SET adjacent_down = adjacent_down + 1, last_down = ? WHERE hostname = ?"""
+                        self.cursor.execute(query, (now,hostname,))
                     else:
                         nb_lost += 1
                         self.logger.log('Host “'+hostname+'” became unreachable.',2)
-                        query = """UPDATE host SET last_change = ? WHERE hostname = ?"""
+                        query = """UPDATE host SET last_change = ?, adjacent_down = 1 WHERE hostname = ?"""
                         self.cursor.execute(query, (now, hostname))
-                        query = """UPDATE host SET adjacent_down = 1 WHERE hostname = ?"""
-                        self.cursor.execute(query, (hostname,))
                 else:
                     nb_up += 1
-                    query = """UPDATE host SET up = up + 1 WHERE hostname = ?"""
-                    self.cursor.execute(query, (hostname,))
-                    query = """UPDATE host SET ping_delay = ? WHERE hostname = ?"""
-                    self.cursor.execute(query, (delay, hostname))
+                    query = """UPDATE host SET up = up + 1, ping_delay = ? WHERE hostname = ?"""
+                    self.cursor.execute(query, (delay,hostname,))
                     if alive:
-                        # ~ print('Host “'+hostname+'” was alive and still is.')
-                        query = """UPDATE host SET adjacent_up = adjacent_up + 1 WHERE hostname = ?"""
-                        self.cursor.execute(query, (hostname,))
-                        query = """UPDATE host SET last_up = ? WHERE hostname = ?"""
-                        self.cursor.execute(query, (now, hostname))
+                        query = """UPDATE host SET adjacent_up = adjacent_up + 1, last_up = ? WHERE hostname = ?"""
+                        self.cursor.execute(query, (now,hostname,))
                     else:
                         
                         if not seen_once:
                             self.logger.log('Host “'+hostname+'” showed up for the first time.',1)
                             nb_new += 1
-                            query = """UPDATE host SET first_up = ? WHERE hostname = ?"""
-                            self.cursor.execute(query, (now, hostname))
-                            query = """UPDATE host SET last_up = ? WHERE hostname = ?"""
-                            self.cursor.execute(query, (now, hostname))
-                            query = """UPDATE host SET adjacent_down = ? WHERE hostname = ?"""
-                            self.cursor.execute(query, (0, hostname))
-                            query = """UPDATE host SET down = ? WHERE hostname = ?"""
-                            self.cursor.execute(query, (0, hostname))
+                            query = """UPDATE host SET first_up = ?, last_up = ?, adjacent_down = 0, down = 0 WHERE hostname = ?"""
+                            self.cursor.execute(query, (now, now, hostname))
                         else: 
                             nb_back += 1
                             self.logger.log('Host “'+hostname+'” is back.',1)   
-                        query = """UPDATE host SET last_change = ? WHERE hostname = ?"""
+                        query = """UPDATE host SET last_change = ?, adjacent_up = 1 WHERE hostname = ?"""
                         self.cursor.execute(query, (now, hostname))
-                        query = """UPDATE host SET adjacent_up = 1 WHERE hostname = ?"""
-                        self.cursor.execute(query, (hostname,))
             except sqlite3.OperationalError as err:
                 self.logger.log('Cant’t update host table! ({})'.format(err),12)
                 return False
@@ -280,7 +252,7 @@ class SQLite:
             self.recordUpdate((time(), network_name, None, nb_up, nb_down, nb_back, nb_lost, nb_new, elapsed))
             self.logger.log('{} hosts updated in {} (UP:{} DOWN:{} BACK:{} LOST:{} NEW:{})'.format(len(ping_delays), elapsed, nb_up, nb_down, nb_back, nb_lost, nb_new), 1)
         except Exception as e:
-            print(' **!!** '+str(e))
+            print('** Fix me! ** '+str(e))
             return False
             
         return True

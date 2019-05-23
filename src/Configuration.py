@@ -5,7 +5,7 @@ import sys
 import resource
 from json import loads, dumps
 class Configuration():
-    def __init__(self):
+    def __init__(self, cmdline):
         self.configuration = {}
         self.filename = str(sys.argv[0])+'.conf'
         try:
@@ -36,5 +36,7 @@ class Configuration():
         if  limit < self.configuration['snmp']['chunk_size']:
             print('{} is too big as chunk size for SNMP check. Setting to {}.'.format(self.configuration['snmp']['chunk_size'],limit))
             self.configuration['snmp']['chunk_size'] = limit  
+
+        if cmdline.option('C') not in ['',True,False]: self.configuration['snmp']['community'] = cmdline.option('C')
 
 if __name__ == '__main__': sys.exit(100)
